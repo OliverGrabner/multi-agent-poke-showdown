@@ -2,9 +2,11 @@
 # Submit the one-time setup, or one run, using the allocation in configs/private/hprc.env.
 #   scripts/hprc/submit.sh setup
 #   scripts/hprc/submit.sh MODEL [pokerl llm arguments...]     (see run.sh)
-# Prints the job ID. Set AFTER=JOBID to start only once that job has finished successfully.
+# Prints the job ID. Set AFTER=JOBID to start only once that job has finished successfully, and
+# TIME=HH:MM:SS to ask for less time than the default (short jobs often start sooner).
 set -euo pipefail
 source configs/private/hprc.env
+HPRC_TIME=${TIME:-$HPRC_TIME}
 mkdir -p runs
 common=(--account="$HPRC_ACCOUNT" --nodes=1 --ntasks=1 --output=runs/slurm-%j.out)
 if [[ -n ${AFTER:-} ]]; then
