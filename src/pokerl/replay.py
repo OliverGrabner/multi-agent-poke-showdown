@@ -32,30 +32,34 @@ document.write('<script src="https://play.pokemonshowdown.com/js/replay-embed.js
 """
 
 
-def chat_lines(record: dict) -> dict[int, list[str]]:
-    """Each team's private talk and choices as colored log lines, keyed by where they go in the log.
+NAME_COLOR = {"Blue": "#1d4ed8", "Red": "#b91c1c"}
 
-    The talk for a decision happened just before the log reached that decision's `log_index`,
-    so the replay viewer shows it right before the moves it led to.
+
+def chat_lines(record: dict) -> dict[int, list[str]]:
+    """Each team's private talk and choices as log lines, keyed by where they go in the log.
+
+    Only the speaker's name is colored by team. The talk for a decision happened just before the
+    log reached that decision's `log_index`, so the viewer shows it right before the moves it led to.
     """
     log_index = {step: entry["log_index"] for step, entry in enumerate(record["steps"])}
     lines: dict[int, list[str]] = {}
     for side_name, side in record["sides"].items():
         if side["kind"] != "talking":
             continue
+        color = NAME_COLOR[TEAM_COLOR[side_name]]
         for event in side["transcript"]:
-            speaker = html.escape(record["players"][event["seat"]])
+            speaker = (
+                f'<strong style="color:{color}">{html.escape(record["players"][event["seat"]])}</strong>'
+            )
             if event["event"] == "say":
-                body = f"<strong>{speaker}:</strong> {html.escape(event['text'])}"
+                body = f"{speaker}: {html.escape(event['text'])}"
             elif event["event"] == "choose":
-                body = f"<em>{speaker} chose {html.escape(event['label'])}</em>"
+                body = f"{speaker} <em>chose {html.escape(event['label'])}</em>"
             else:
                 continue
             # One protocol line: no newlines, and a "|" would end the line early.
             body = " ".join(body.split()).replace("|", "/")
-            # Showdown's own message styles: broadcast-blue and broadcast-red.
-            line = f'|raw|<div class="broadcast-{TEAM_COLOR[side_name].lower()}">{body}</div>'
-            lines.setdefault(log_index[event["step"]], []).append(line)
+            lines.setdefault(log_index[event["step"]], []).append(f'|raw|<div class="chat">{body}</div>')
     return lines
 
 

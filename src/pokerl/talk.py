@@ -95,7 +95,7 @@ class TalkingTeam:
 
     def names(self) -> dict[str, str]:
         return {
-            seat: f"{agent.name} · {self.label}" if self.label else agent.name
+            seat: f"{agent.name} - {self.label}" if self.label else agent.name
             for seat, agent in self.agents.items()
         }
 

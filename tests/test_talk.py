@@ -132,7 +132,7 @@ def test_observation_lists_every_legal_option(bridge):
 
 
 def test_replay_shows_both_teams_chat_before_the_moves_it_led_to(bridge):
-    from pokerl.replay import log_with_chat
+    from pokerl.replay import NAME_COLOR, log_with_chat
 
     env = MultiBattleEnv(bridge)
     spec = make_specs(load_pool(), 1, "talk-replay", mirror=False)[0]
@@ -146,13 +146,14 @@ def test_replay_shows_both_teams_chat_before_the_moves_it_led_to(bridge):
         teams[side] = TalkingTeam({first: a, second: b}, Dex(bridge))
     record = play(env, spec, teams)
     merged = log_with_chat(record)
-    chats = [line for line in merged if line.startswith('|raw|<div class="broadcast-')]
+    chats = [line for line in merged if line.startswith('|raw|<div class="chat">')]
     talk_events = [
         e for side in record["sides"].values() for e in side["transcript"] if e["event"] in ("say", "choose")
     ]
     assert len(chats) == len(talk_events)
-    assert any("broadcast-red" in line and "Jordan" in line for line in chats)
-    assert any("broadcast-blue" in line and "Alex chose " in line for line in chats)
+    red, blue = NAME_COLOR["Red"], NAME_COLOR["Blue"]
+    assert any(f'<strong style="color:{red}">Jordan</strong>:' in line for line in chats)
+    assert any(f'<strong style="color:{blue}">Alex</strong> <em>chose ' in line for line in chats)
     # Turn 1's talk comes after the "turn 1" marker and before any move of turn 1.
     first_chat = merged.index(chats[0])
     assert (

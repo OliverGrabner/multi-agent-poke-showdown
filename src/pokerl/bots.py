@@ -90,7 +90,7 @@ class BotSide:
         self.policies = policies
 
     def names(self) -> dict[str, str]:
-        return {seat: f"{PLAYER[seat]} · {policy.name}" for seat, policy in self.policies.items()}
+        return {seat: f"{PLAYER[seat]} - {policy.name}" for seat, policy in self.policies.items()}
 
     def decide(self, env, seats: list[str], step: int, rejected: dict[str, str]) -> dict[str, str]:
         return {
