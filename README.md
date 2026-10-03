@@ -2,12 +2,13 @@
 
 ![Two AI teammates planning their moves in a Pokémon double battle](assets/banner.png)
 
-Two LLM agents play as teammates in Pokémon Showdown 4-player Multi Battles (`gen9multirandombattle`):
-seats p1 + p3 against p2 + p4, each player controlling one active Pokémon from a team of 3.
-See [docs/HANDOFF.md](docs/HANDOFF.md) for the project brief and [docs/DECISIONS.md](docs/DECISIONS.md)
-for every design choice since.
+Two LLM agents play as teammates in Pokémon Showdown 4-player Multi Battles
+(`gen9multirandombattle` with Terastallization off): seats p1 + p3 against p2 + p4, each player
+controlling one active Pokémon from a team of 3. Before acting, teammates talk privately; each then
+chooses its own move, and choosing ends its talking (its partner is told what it chose).
 
-**Status:** Phase 1 (environment and scripted bots) is done. Phase 2 (LLM agents and the talk loop) is next.
+**Status:** Phase 1 (environment and scripted bots) is done. Phase 2 is in progress: agent
+observations and the talk loop are built and tested with scripted agents; the model client is next.
 
 ## Setup
 
@@ -58,7 +59,12 @@ its legal actions (each a Showdown choice string plus facts about the move and i
 ```
 bridge/bridge.js      Node process hosting Showdown battles (JSON lines over stdin/stdout)
 src/pokerl/env.py     MultiBattleEnv: reset / step / save / load, per-seat views
-src/pokerl/bots.py    random and max-power policies
+src/pokerl/bots.py    random and max-power policies; BotSide controller
+src/pokerl/tracker.py public battle state rebuilt from one player's log
+src/pokerl/narrate.py battle events in plain English from one player's view
+src/pokerl/observation.py  the per-turn message an agent reads, with numbered options
+src/pokerl/talk.py    TalkingTeam controller: teammates talk (say) and choose
+src/pokerl/dex.py     cached names, types and descriptions from Showdown's data
 src/pokerl/teams.py   team pools and battle specs (seeds, mirrored pairs)
 src/pokerl/runner.py  play battles, parallel batches, JSONL logs, summaries
 src/pokerl/replay.py  Showdown replay pages
@@ -66,12 +72,12 @@ data/teams/           fixed team pools
 runs/                 batch outputs (not tracked)
 ```
 
-## Phase 1 results (2026-10-02, laptop, 6 worker processes)
+## Phase 1 results (2026-10-02, laptop, 6 worker processes, Terastallization off)
 
 | Check | Result |
 |---|---|
-| Max-power (p1+p3) vs random, 1,000 battles on 500 mirrored seeds | 99.2% wins (95% CI 98.4–99.6%), 0 crashes, 9.2 turns on average |
-| Random vs random, 250 battles | 49.6% (CI 43.5–55.8%), 0 crashes, 16.8 turns on average |
+| Max-power (p1+p3) vs random, 1,000 battles on 500 mirrored seeds | 99.6% wins (95% CI 99.0–99.8%), 0 crashes, 8.7 turns on average |
+| Random vs random, 250 battles | 46.4% (CI 40.3–52.6%), 0 crashes, 17.7 turns on average |
 | Same seed, same choices → same battle | 100/100 |
-| Save mid-battle, resume twice → both match the uninterrupted battle | 100/100 (after fixing a Showdown Multi Battle save/load bug; see DECISIONS) |
-| Rejected choices | 20, all switches blocked by a hidden trapping ability (real Showdown behavior) |
+| Save mid-battle, resume twice → both match the uninterrupted battle | 100/100 (after fixing a Showdown Multi Battle save/load bug in the bridge) |
+| Rejected choices | 24, all switches blocked by a hidden trapping ability (real Showdown behavior) |
