@@ -62,19 +62,32 @@ MODELS = {
         price_out=3.75,
         budget=2.00,
     ),
-    # Served by vLLM on HPRC. Sampling: model card, "thinking mode for general tasks".
-    "qwen3.5-27b": ModelConfig(
-        model="Qwen/Qwen3.5-27B",
+    # Main model, served by vLLM on HPRC. Sampling: model card, thinking mode (checked 2026-10-03).
+    "qwen3.8-27b": ModelConfig(
+        model="Qwen/Qwen3.8-27B",
         base_url="$QWEN_BASE_URL",
-        key_env="QWEN_API_KEY",
+        key_env="VLLM_API_KEY",
         params={
             "temperature": 1.0,
             "top_p": 0.95,
             "top_k": 20,
             "min_p": 0.0,
-            "presence_penalty": 1.5,
+            "presence_penalty": 0.0,
             "repetition_penalty": 1.0,
             # Thinking is Qwen's default; stated explicitly so it never silently changes.
+            "chat_template_kwargs": {"enable_thinking": True},
+        },
+    ),
+    # Second model family, served by vLLM on HPRC; used only if it passes the tool-call check.
+    # Sampling: model card (checked 2026-10-03).
+    "gemma-4-31b": ModelConfig(
+        model="google/gemma-4-31B-it",
+        base_url="$GEMMA_BASE_URL",
+        key_env="VLLM_API_KEY",
+        params={
+            "temperature": 1.0,
+            "top_p": 0.95,
+            "top_k": 64,
             "chat_template_kwargs": {"enable_thinking": True},
         },
     ),
