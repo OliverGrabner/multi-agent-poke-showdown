@@ -1,4 +1,6 @@
-# poke-rl
+# Pokemon Showdown Multi Agent Collaberation RL
+
+![Two AI teammates planning their moves in a Pokémon double battle](assets/banner.png)
 
 Two LLM agents play as teammates in Pokémon Showdown 4-player Multi Battles (`gen9multirandombattle`):
 seats p1 + p3 against p2 + p4, each player controlling one active Pokémon from a team of 3.
