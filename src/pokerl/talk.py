@@ -91,10 +91,14 @@ class TalkingTeam:
         agents: dict[str, Agent],
         dex: Dex,
         labels: dict[str, str] | None = None,
+        keep_talking: bool = True,
         max_messages: int = MAX_MESSAGES,
     ):
         self.agents = agents
         self.labels = labels or {}  # per seat, shown after the player's name in the battle (the model)
+        # True: choosing locks only your own action and talk goes on until both have chosen.
+        # False (the first rule): the first choice ends the conversation for both.
+        self.keep_talking = keep_talking
         self.max_messages = max_messages
         self.observers = {seat: Observer(seat, agents[ALLY[seat]].name, dex) for seat in agents}
         self.transcript: list[dict] = []
@@ -135,17 +139,25 @@ class TalkingTeam:
             if choosers <= chosen.keys():
                 break
             partner = ALLY[seat] if ALLY[seat] in talkers else None
-            can_talk = partner is not None and partner not in chosen and messages < self.max_messages
-            if seat in chosen or (seat not in choosers and not can_talk):
+            can_talk = partner is not None and messages < self.max_messages
+            if not self.keep_talking:
+                can_talk = can_talk and partner not in chosen
+            if seat in chosen:
+                # A player who has chosen only speaks again to answer something new from its partner.
+                if not (self.keep_talking and can_talk and inbox.get(seat)):
+                    continue
+            elif seat not in choosers and not can_talk:
                 continue
-            reply = self.ask(env, step, seat, inbox.pop(seat, ""), can_talk, seat in choosers)
+            must_choose = seat in choosers and seat not in chosen
+            reply = self.ask(env, step, seat, inbox.pop(seat, ""), can_talk, must_choose)
             if isinstance(reply, Say):
                 messages += 1
                 self.log(env, step, seat, "say", text=reply.message)
                 add(inbox, partner, f'{self.agents[seat].name} says: "{reply.message}"')
                 if messages == self.max_messages:
                     for talker in talkers:
-                        add(inbox, talker, "Talking time is over. Choose your action now.")
+                        if talker not in chosen:
+                            add(inbox, talker, "Talking time is over. Choose your action now.")
             elif isinstance(reply, Choose):
                 action = env.views[seat].legal[reply.option - 1]
                 chosen[seat] = action["choice"]
@@ -167,7 +179,7 @@ class TalkingTeam:
         for _ in range(MAX_RETRIES + 1):
             try:
                 reply = self.agents[seat].respond(text)
-                problem = self.problem(seat, reply, can_talk, must_choose, options)
+                problem = self.problem(reply, can_talk, must_choose, options)
             except InvalidReply as error:
                 problem = str(error)
             if not problem:
@@ -180,9 +192,9 @@ class TalkingTeam:
         self.log(env, step, seat, "fallback", option=option)
         return Choose(option)
 
-    def problem(self, seat: str, reply: Reply, can_talk: bool, must_choose: bool, options: int) -> str:
+    @staticmethod
+    def problem(reply: Reply, can_talk: bool, must_choose: bool, options: int) -> str:
         """Why a well-formed reply is not allowed right now, or '' if it is."""
-        partner = self.agents[ALLY[seat]].name
         if isinstance(reply, Say):
             if not reply.message.strip():
                 return "your message is empty."
@@ -190,7 +202,9 @@ class TalkingTeam:
                 return "you cannot talk right now. Call choose."
         elif isinstance(reply, Choose):
             if not must_choose:
-                return f"you have nothing to choose right now; {partner} is choosing. You can talk with say."
+                return (
+                    "you have nothing to choose right now (your action is set or not needed). Reply with say."
+                )
             if not 1 <= reply.option <= options:
                 return f"the option must be a number from 1 to {options}."
         return ""

@@ -23,10 +23,7 @@ the opponents. You learn an opponent's moves, item and ability only once they ar
 TALKING AND CHOOSING
 {talk_guidance}- Before acting, you and {partner} can talk privately with say(message). The opponents never see \
 your messages. Say anything you like, in any form. Who speaks first alternates each turn.
-- When you are ready, call choose(option) with the number of one of your options. Choosing ends \
-your talking for this turn, and {partner} is told exactly what you chose.
-- Once {partner} has chosen, you cannot talk any more this turn; just choose.
-- Your messages are not binding. You decide your own action.
+{choosing_rules}- Your messages are not binding. You decide your own action.
 - If only one of you has to act (for example, to replace a fainted Pokémon), the other can still \
 talk but has nothing to choose.
 - Call exactly one tool each time you reply.
@@ -41,7 +38,27 @@ conclusion.
 """
 
 
-def system_prompt(you: str, partner: str, talk_guidance: bool = True) -> str:
+# The current rule: choosing locks only your own action; talk goes on until both have chosen.
+KEEP_TALKING_RULES = """\
+- When you are ready, call choose(option) with the number of one of your options. Choosing locks \
+your action, and {partner} is told exactly what you chose. You can keep talking until {partner} has \
+chosen too; the turn plays out once you both have.
+- Once you have chosen, you can't change it.
+"""
+
+# The first rule, kept for comparison: the first choice ends the conversation for both.
+CHOOSING_ENDS_TALK_RULES = """\
+- When you are ready, call choose(option) with the number of one of your options. Choosing ends \
+your talking for this turn, and {partner} is told exactly what you chose.
+- Once {partner} has chosen, you cannot talk any more this turn; just choose.
+"""
+
+
+def system_prompt(you: str, partner: str, talk_guidance: bool = True, keep_talking: bool = True) -> str:
+    rules = KEEP_TALKING_RULES if keep_talking else CHOOSING_ENDS_TALK_RULES
     return SYSTEM_PROMPT.format(
-        you=you, partner=partner, talk_guidance=TALK_GUIDANCE if talk_guidance else ""
+        you=you,
+        partner=partner,
+        talk_guidance=TALK_GUIDANCE if talk_guidance else "",
+        choosing_rules=rules.format(partner=partner),
     )

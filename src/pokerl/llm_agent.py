@@ -31,7 +31,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "choose",
-            "description": "Lock in your action. Ends your talking; your partner is told what you chose.",
+            "description": "Lock in your action. Your partner is told what you chose.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -67,10 +67,11 @@ def parse_call(call: dict) -> Reply:
 
 
 class LLMAgent:
-    def __init__(self, name: str, partner_name: str, client: ChatClient):
+    def __init__(self, name: str, partner_name: str, client: ChatClient, keep_talking: bool = True):
         self.name = name
         self.client = client
-        self.messages: list[dict] = [{"role": "system", "content": system_prompt(name, partner_name)}]
+        prompt = system_prompt(name, partner_name, keep_talking=keep_talking)
+        self.messages: list[dict] = [{"role": "system", "content": prompt}]
         self.waiting_calls: list[str] = []  # ids of tool calls whose result has not been sent yet
         self.calls: list[dict] = []  # one entry per model call, for the battle log
 

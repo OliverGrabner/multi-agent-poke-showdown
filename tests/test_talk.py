@@ -160,3 +160,32 @@ def test_replay_shows_both_teams_chat_before_the_moves_it_led_to(bridge):
         < first_chat
         < next(i for i, line in enumerate(merged) if line.startswith("|move|"))
     )
+
+
+def first_round(bridge, keep_talking: bool):
+    """Turn 1 (p3 speaks first): Sam chooses at once, then Alex asks Sam a question."""
+    env = MultiBattleEnv(bridge)
+    spec = make_specs(load_pool(), 1, "talk-lock", mirror=False)[0]
+    sam = ScriptedAgent("Sam", None)
+    sam.script = lambda text: Choose(1) if len(sam.inputs) == 1 else Say("Yes, hit the same target.")
+    alex = ScriptedAgent(
+        "Alex", lambda text: Choose(1) if "says:" in text or "did not work" in text else Say("Same target?")
+    )
+    team = TalkingTeam({"p1": alex, "p3": sam}, Dex(bridge), keep_talking=keep_talking)
+    env.reset(spec.seed, spec.teams)
+    team.decide(env, ["p1", "p3"], 0, {})
+    env.close()
+    return [(e["seat"], e["event"]) for e in team.transcript if e["event"] != "observation"]
+
+
+def test_after_choosing_a_player_can_still_answer_its_partner(bridge):
+    assert first_round(bridge, keep_talking=True) == [
+        ("p3", "choose"),
+        ("p1", "say"),
+        ("p3", "say"),
+        ("p1", "choose"),
+    ]
+
+
+def test_first_rule_ends_the_talk_at_the_first_choice(bridge):
+    assert first_round(bridge, keep_talking=False) == [("p3", "choose"), ("p1", "invalid"), ("p1", "choose")]

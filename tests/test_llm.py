@@ -169,3 +169,11 @@ def test_a_team_can_mix_two_models():
     assert sorted(clients) == ["gemini-3.1-flash-lite", "gemini-3.8-flash"]
     same = make_side("p2p4", "gemini-3.5-flash-lite", clients, dex=None)
     assert same.names() == {"p2": "Red 1 - gemini-3.5-flash-lite", "p4": "Red 2 - gemini-3.5-flash-lite"}
+
+
+def test_prompt_states_the_chosen_talk_rule():
+    from pokerl.prompts import system_prompt
+
+    assert "You can keep talking until Blue 2 has chosen too" in system_prompt("Blue 1", "Blue 2")
+    first_rule = system_prompt("Blue 1", "Blue 2", keep_talking=False)
+    assert "Once Blue 2 has chosen, you cannot talk any more this turn" in first_rule

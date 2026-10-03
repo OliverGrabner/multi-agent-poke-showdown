@@ -30,7 +30,7 @@ def check_player(player: str) -> None:
             )
 
 
-def make_side(side: str, player: str, clients: dict[str, ChatClient], dex: Dex):
+def make_side(side: str, player: str, clients: dict[str, ChatClient], dex: Dex, keep_talking: bool = True):
     """A BotSide for a bot policy, else a TalkingTeam. 'a+b' gives the first seat model a, the second b."""
     first, second = SIDES[side]
     if player in POLICIES:
@@ -43,13 +43,15 @@ def make_side(side: str, player: str, clients: dict[str, ChatClient], dex: Dex):
         if model not in clients:
             clients[model] = ChatClient(model)
     agents = {
-        first: LLMAgent(PLAYER[first], PLAYER[second], clients[seat_models[first]]),
-        second: LLMAgent(PLAYER[second], PLAYER[first], clients[seat_models[second]]),
+        first: LLMAgent(PLAYER[first], PLAYER[second], clients[seat_models[first]], keep_talking),
+        second: LLMAgent(PLAYER[second], PLAYER[first], clients[seat_models[second]], keep_talking),
     }
-    return TalkingTeam(agents, dex, labels=seat_models)
+    return TalkingTeam(agents, dex, labels=seat_models, keep_talking=keep_talking)
 
 
-def run_llm_batch(specs: list[BattleSpec], side_a: str, side_b: str, out_path: Path) -> list[dict]:
+def run_llm_batch(
+    specs: list[BattleSpec], side_a: str, side_b: str, out_path: Path, keep_talking: bool = True
+) -> list[dict]:
     """Play every spec in order, appending one JSON line per battle. Stops at once if a budget runs out."""
     check_player(side_a)
     check_player(side_b)
@@ -61,8 +63,8 @@ def run_llm_batch(specs: list[BattleSpec], side_a: str, side_b: str, out_path: P
         dex = Dex(bridge)
         for spec in specs:
             sides = {
-                "p1p3": make_side("p1p3", side_a, clients, dex),
-                "p2p4": make_side("p2p4", side_b, clients, dex),
+                "p1p3": make_side("p1p3", side_a, clients, dex, keep_talking),
+                "p2p4": make_side("p2p4", side_b, clients, dex, keep_talking),
             }
             try:
                 record = play(env, spec, sides)

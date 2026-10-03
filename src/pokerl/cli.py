@@ -158,10 +158,12 @@ def cmd_llm(args: argparse.Namespace) -> None:
         raise SystemExit(f"{battles} exists; pick a new --label")
     specs = make_specs(load_pool(args.pool), args.battles, args.label, mirror=False)
     start = time.perf_counter()
-    records = run_llm_batch(specs, args.side_a, args.side_b, battles)
+    keep_talking = not args.choosing_ends_talk
+    records = run_llm_batch(specs, args.side_a, args.side_b, battles, keep_talking)
     summary = {
         "side_a (p1+p3)": args.side_a,
         "side_b (p2+p4)": args.side_b,
+        "talk_rule": "keep talking until both choose" if keep_talking else "first choice ends talk",
         **summarize(records),
         "talk_side_a": summarize_talk(records, "p1p3"),
         "talk_side_b": summarize_talk(records, "p2p4"),
@@ -216,6 +218,9 @@ def main(argv: list[str] | None = None) -> None:
     llm.add_argument("--side-b", default="random", help="p2 + p4: a model name or a bot policy")
     llm.add_argument("--label", required=True, help="names the output folder and seeds the battles")
     llm.add_argument("--battles", type=int, default=1)
+    llm.add_argument(
+        "--choosing-ends-talk", action="store_true", help="the first rule: a choice ends the talk"
+    )
     llm.add_argument("--pool", default=str(DEFAULT_POOL))
     llm.add_argument("--out-dir", default="runs")
     llm.set_defaults(func=cmd_llm)
