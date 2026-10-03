@@ -21,7 +21,7 @@ facts about each one. You see exact HP for your team and {partner}'s team, and p
 the opponents. You learn an opponent's moves, item and ability only once they are revealed.
 
 TALKING AND CHOOSING
-- Before acting, you and {partner} can talk privately with say(message). The opponents never see \
+{talk_guidance}- Before acting, you and {partner} can talk privately with say(message). The opponents never see \
 your messages. Say anything you like, in any form. Who speaks first alternates each turn.
 - When you are ready, call choose(option) with the number of one of your options. Choosing ends \
 your talking for this turn, and {partner} is told exactly what you chose.
@@ -33,5 +33,15 @@ talk but has nothing to choose.
 """
 
 
-def system_prompt(you: str, partner: str) -> str:
-    return SYSTEM_PROMPT.format(you=you, partner=partner)
+# Says what talking is for (how to work together), not how to play. Off reproduces the first prompt.
+TALK_GUIDANCE = """\
+- Talking is how your team plans together. Share what you notice, propose and question plans, point \
+out risks, and disagree if you see a better option. Take as many messages as you need to come to a \
+conclusion.
+"""
+
+
+def system_prompt(you: str, partner: str, talk_guidance: bool = True) -> str:
+    return SYSTEM_PROMPT.format(
+        you=you, partner=partner, talk_guidance=TALK_GUIDANCE if talk_guidance else ""
+    )

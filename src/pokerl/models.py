@@ -64,6 +64,8 @@ MODELS = {
             "min_p": 0.0,
             "presence_penalty": 1.5,
             "repetition_penalty": 1.0,
+            # Thinking is Qwen's default; stated explicitly so it never silently changes.
+            "chat_template_kwargs": {"enable_thinking": True},
         },
     ),
 }

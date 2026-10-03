@@ -149,3 +149,12 @@ def test_two_clients_share_one_ledger_total(tmp_path):
     second.add("gemini_key", 0.50)
     first.add("gemini_key", 0.25)
     assert second.total("gemini_key") == pytest.approx(1.0)
+
+
+def test_talk_guidance_is_on_by_default_and_can_be_turned_off():
+    from pokerl.prompts import system_prompt
+
+    assert "Talking is how your team plans together." in system_prompt("Blue 1", "Blue 2")
+    plain = system_prompt("Blue 1", "Blue 2", talk_guidance=False)
+    assert "Talking is how your team plans together." not in plain
+    assert "TALKING AND CHOOSING\n- Before acting" in plain
