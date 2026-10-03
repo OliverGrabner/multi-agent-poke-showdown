@@ -127,3 +127,10 @@ def test_load_env_reads_values_without_overriding(tmp_path, monkeypatch):
 
     assert os.environ["pokerl_test_a"] == "already set"
     assert os.environ["pokerl_test_b"] == "two"
+
+
+def test_thinking_is_sent_back_under_the_name_qwens_template_reads():
+    from pokerl.models import clean_message
+
+    returned = {"role": "assistant", "content": None, "reasoning": "Mewtwo is faster...", "tool_calls": []}
+    assert clean_message(returned) == {"role": "assistant", "reasoning_content": "Mewtwo is faster..."}

@@ -92,6 +92,18 @@ class Ledger:
         self.path.write_text(json.dumps(self.spent, indent=1))
 
 
+def clean_message(message: dict) -> dict:
+    """The assistant message as it should be sent back: empty fields dropped, thinking under one name.
+
+    vLLM may return Qwen's thinking as `reasoning`; Qwen's chat template reads `reasoning_content`.
+    Provider extras such as Gemini's thought signatures are kept untouched.
+    """
+    message = {k: v for k, v in message.items() if v is not None and v != []}
+    if "reasoning" in message:
+        message.setdefault("reasoning_content", message.pop("reasoning"))
+    return message
+
+
 @dataclass
 class Completion:
     message: dict  # the assistant message exactly as returned, to send back in later requests
@@ -130,8 +142,7 @@ class ChatClient:
         if self.config.budget is not None:
             self.ledger.add(self.config.key_env, cost)
         choice = data["choices"][0]
-        message = {k: v for k, v in choice["message"].items() if v is not None and v != []}
-        return Completion(message, usage, cost, seconds, choice.get("finish_reason"))
+        return Completion(clean_message(choice["message"]), usage, cost, seconds, choice.get("finish_reason"))
 
     def post(self, body: dict) -> dict:
         headers = {"Authorization": f"Bearer {os.environ[self.config.key_env]}"}
