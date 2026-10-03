@@ -134,3 +134,18 @@ def test_thinking_is_sent_back_under_the_name_qwens_template_reads():
 
     returned = {"role": "assistant", "content": None, "reasoning": "Mewtwo is faster...", "tool_calls": []}
     assert clean_message(returned) == {"role": "assistant", "reasoning_content": "Mewtwo is faster..."}
+
+
+def test_output_tokens_include_thinking_that_gemini_leaves_out_of_completion_tokens():
+    from pokerl.models import output_tokens
+
+    assert output_tokens({"prompt_tokens": 2434, "completion_tokens": 40, "total_tokens": 3113}) == 679
+    assert output_tokens({"prompt_tokens": 10, "completion_tokens": 5}) == 5
+
+
+def test_two_clients_share_one_ledger_total(tmp_path):
+    first, second = Ledger(tmp_path / "ledger.json"), Ledger(tmp_path / "ledger.json")
+    first.add("gemini_key", 0.25)
+    second.add("gemini_key", 0.50)
+    first.add("gemini_key", 0.25)
+    assert second.total("gemini_key") == pytest.approx(1.0)

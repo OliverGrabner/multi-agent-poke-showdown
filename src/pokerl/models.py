@@ -42,6 +42,16 @@ MODELS = {
         price_out=1.50,
         budget=2.00,
     ),
+    # The stronger Gemini for the strong-vs-weak demo. Promotional prices through 2026-12-31.
+    "gemini-3.8-flash": ModelConfig(
+        model="gemini-3.8-flash",
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai",
+        key_env="gemini_key",
+        price_in=0.75,
+        price_cached=0.075,
+        price_out=3.75,
+        budget=2.00,
+    ),
     # Served by vLLM on HPRC. Sampling: model card, "thinking mode for general tasks".
     "qwen3.5-27b": ModelConfig(
         model="Qwen/Qwen3.5-27B",
@@ -78,18 +88,35 @@ def load_env(path: Path = REPO / ".env") -> None:
 
 
 class Ledger:
-    """Total paid spend per API key, kept on disk so the cap holds across runs."""
+    """Total paid spend per API key, kept on disk so the cap holds across runs.
+
+    Every read and update goes to the file, so several clients (one per model) share one total.
+    """
 
     def __init__(self, path: Path = LEDGER):
         self.path = path
-        self.spent: dict[str, float] = json.loads(path.read_text()) if path.exists() else {}
+
+    def read(self) -> dict[str, float]:
+        return json.loads(self.path.read_text()) if self.path.exists() else {}
 
     def total(self, key_env: str) -> float:
-        return self.spent.get(key_env, 0.0)
+        return self.read().get(key_env, 0.0)
 
     def add(self, key_env: str, cost: float) -> None:
-        self.spent[key_env] = self.total(key_env) + cost
-        self.path.write_text(json.dumps(self.spent, indent=1))
+        spent = self.read()
+        spent[key_env] = spent.get(key_env, 0.0) + cost
+        self.path.write_text(json.dumps(spent, indent=1))
+
+
+def output_tokens(usage: dict) -> int:
+    """Billed output tokens, thinking included.
+
+    Gemini leaves thinking out of `completion_tokens` but counts it in `total_tokens`;
+    vLLM counts it in both. Total minus prompt is right for either.
+    """
+    if "total_tokens" in usage:
+        return usage["total_tokens"] - usage.get("prompt_tokens", 0)
+    return usage.get("completion_tokens", 0)
 
 
 def clean_message(message: dict) -> dict:
@@ -166,8 +193,9 @@ class ChatClient:
         config = self.config
         cached = (usage.get("prompt_tokens_details") or {}).get("cached_tokens") or 0
         fresh = usage.get("prompt_tokens", 0) - cached
-        output = usage.get("completion_tokens", 0)
-        return (fresh * config.price_in + cached * config.price_cached + output * config.price_out) / 1e6
+        return (
+            fresh * config.price_in + cached * config.price_cached + output_tokens(usage) * config.price_out
+        ) / 1e6
 
     def check_budget(self, messages: list[dict]) -> None:
         """Refuse a paid call if even its worst case (long input, maximum output) could pass the cap."""
