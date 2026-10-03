@@ -3,11 +3,11 @@ import random
 import pytest
 
 from pokerl import SEATS
-from pokerl.bots import MaxPowerBot, RandomBot, move_score
+from pokerl.bots import move_score, step_rng
 from pokerl.bridge import Bridge
 from pokerl.cli import reproducibility_check
 from pokerl.env import InvalidAction, MultiBattleEnv
-from pokerl.runner import play
+from pokerl.runner import bot_sides, play
 from pokerl.teams import load_pool, make_specs
 
 
@@ -28,9 +28,9 @@ def test_bridge_pins_showdown(bridge):
 
 def test_random_battles_finish_and_only_hidden_traps_are_rejected(bridge, pool):
     env = MultiBattleEnv(bridge)
-    policies = {seat: RandomBot() for seat in SEATS}
+    sides = bot_sides(dict.fromkeys(SEATS, "random"))
     for spec in make_specs(pool, 15, "test-fuzz"):
-        record = play(env, spec, policies)
+        record = play(env, spec, sides)
         assert record["winning_side"] in ("p1p3", "p2p4", None)
         assert not record["truncated"]
         # Legal lists are exact except for traps the player cannot see (Shadow Tag, Arena Trap...).
@@ -58,6 +58,15 @@ def test_each_seat_sees_only_its_own_exact_hp(bridge, pool):
     # The request carries the ally's full team, moves included.
     assert views["p1"].ally["id"] == "p3"
     assert all(mon["moves"] for mon in views["p1"].ally["pokemon"])
+    env.close()
+
+
+def test_terastallization_is_off(bridge, pool):
+    spec = make_specs(pool, 1, "test-tera", mirror=False)[0]
+    env = MultiBattleEnv(bridge)
+    views = env.reset(spec.seed, spec.teams)
+    assert "|rule|Terastal Clause: You cannot Terastallize" in views["p1"].log
+    assert all("terastallize" not in choice for seat in SEATS for choice in views[seat].choices)
     env.close()
 
 
@@ -113,15 +122,11 @@ def test_move_score_prefers_super_effective_and_avoids_ally():
 
 def test_maxpower_beats_random_over_mirrored_pairs(bridge, pool):
     env = MultiBattleEnv(bridge)
-    policies = {"p1": MaxPowerBot(), "p3": MaxPowerBot(), "p2": RandomBot(), "p4": RandomBot()}
-    wins = sum(
-        play(env, spec, policies)["winning_side"] == "p1p3" for spec in make_specs(pool, 20, "test-mp")
-    )
+    sides = bot_sides({"p1": "maxpower", "p3": "maxpower", "p2": "random", "p4": "random"})
+    wins = sum(play(env, spec, sides)["winning_side"] == "p1p3" for spec in make_specs(pool, 20, "test-mp"))
     assert wins >= 28  # of 40; the full check uses 1,000 battles
 
 
 def test_step_rng_is_stateless():
-    from pokerl.runner import step_rng
-
     assert step_rng("s", "p1", 3).random() == step_rng("s", "p1", 3).random()
     assert isinstance(step_rng("s", "p1", 3), random.Random)
