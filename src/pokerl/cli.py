@@ -9,11 +9,12 @@ import time
 from pathlib import Path
 
 from pokerl import SEATS
+from pokerl.analysis import report
 from pokerl.bots import RandomBot, step_rng
 from pokerl.bridge import Bridge
 from pokerl.env import MultiBattleEnv
 from pokerl.llm_agent import TOOLS
-from pokerl.llm_batch import run_llm_batch, summarize_talk
+from pokerl.llm_batch import SIDE_MODES, read_records, run_llm_batch
 from pokerl.models import MODELS, ChatClient, load_env
 from pokerl.replay import write_replay
 from pokerl.runner import bot_sides, play, run_batch, summarize
@@ -150,29 +151,35 @@ def cmd_model_check(args: argparse.Namespace) -> None:
 
 
 def cmd_llm(args: argparse.Namespace) -> None:
-    """Battles where each side is an LLM team (a model name) or scripted bots (a policy name)."""
+    """Battles where each side is model-backed (in a given mode) or scripted bots.
+
+    Re-running with the same label resumes: battles already in battles.jsonl are skipped.
+    """
     load_env()
     out_dir = Path(args.out_dir) / args.label
     battles = out_dir / "battles.jsonl"
-    if battles.exists():
-        raise SystemExit(f"{battles} exists; pick a new --label")
-    specs = make_specs(load_pool(args.pool), args.battles, args.label, mirror=False)
-    start = time.perf_counter()
+    specs = make_specs(load_pool(args.pool), args.pairs, args.label, mirror=not args.no_mirror)
     keep_talking = not args.choosing_ends_talk
-    records = run_llm_batch(specs, args.side_a, args.side_b, battles, keep_talking)
+    records = run_llm_batch(
+        specs, args.side_a, args.side_b, battles, args.mode_a, args.mode_b, keep_talking, args.workers
+    )
     summary = {
-        "side_a (p1+p3)": args.side_a,
-        "side_b (p2+p4)": args.side_b,
+        "side_a": f"{args.side_a} ({args.mode_a})",
+        "side_b": f"{args.side_b} ({args.mode_b})",
         "talk_rule": "keep talking until both choose" if keep_talking else "first choice ends talk",
-        **summarize(records),
-        "talk_side_a": summarize_talk(records, "p1p3"),
-        "talk_side_b": summarize_talk(records, "p2p4"),
-        "seconds": round(time.perf_counter() - start, 1),
+        **report(records),
     }
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=1) + "\n", encoding="utf-8")
-    for record in records:
-        if "crash" not in record:
-            write_replay(record, out_dir / "replays" / f"{record['battle_key']}.html")
+    for record in [r for r in records if "crash" not in r][: args.replays]:
+        write_replay(record, out_dir / "replays" / f"{record['battle_key']}.html")
+    print(json.dumps(summary, indent=1))
+
+
+def cmd_analyze(args: argparse.Namespace) -> None:
+    """Recompute the objective numbers for a battles.jsonl file and write summary.json beside it."""
+    path = Path(args.battles)
+    summary = report(read_records(path))
+    (path.parent / "summary.json").write_text(json.dumps(summary, indent=1) + "\n", encoding="utf-8")
     print(json.dumps(summary, indent=1))
 
 
@@ -213,17 +220,26 @@ def main(argv: list[str] | None = None) -> None:
     model_check.add_argument("--model", required=True, choices=sorted(MODELS))
     model_check.set_defaults(func=cmd_model_check)
 
-    llm = sub.add_parser("llm", help="battles with LLM teams and/or bots")
-    llm.add_argument("--side-a", required=True, help="p1 + p3: a model name or a bot policy")
-    llm.add_argument("--side-b", default="random", help="p2 + p4: a model name or a bot policy")
+    llm = sub.add_parser("llm", help="battles with model-backed sides and/or bots")
+    llm.add_argument("--side-a", required=True, help="p1 + p3: a model, two models joined by +, or a bot")
+    llm.add_argument("--side-b", default="random", help="p2 + p4: a model, two models joined by +, or a bot")
+    llm.add_argument("--mode-a", default="free", choices=SIDE_MODES, help="condition for side a")
+    llm.add_argument("--mode-b", default="free", choices=SIDE_MODES, help="condition for side b")
     llm.add_argument("--label", required=True, help="names the output folder and seeds the battles")
-    llm.add_argument("--battles", type=int, default=1)
+    llm.add_argument("--pairs", type=int, default=1, help="seeds; each is played twice unless --no-mirror")
+    llm.add_argument("--no-mirror", action="store_true")
+    llm.add_argument("--workers", type=int, default=1, help="battles played at the same time")
+    llm.add_argument("--replays", type=int, default=10, help="export replays for the first N battles")
     llm.add_argument(
         "--choosing-ends-talk", action="store_true", help="the first rule: a choice ends the talk"
     )
     llm.add_argument("--pool", default=str(DEFAULT_POOL))
     llm.add_argument("--out-dir", default="runs")
     llm.set_defaults(func=cmd_llm)
+
+    analyze = sub.add_parser("analyze", help="objective numbers for a battles.jsonl file")
+    analyze.add_argument("battles", help="a battles.jsonl file")
+    analyze.set_defaults(func=cmd_analyze)
 
     for command in (run, check):
         command.add_argument("--pool", default=str(DEFAULT_POOL))
