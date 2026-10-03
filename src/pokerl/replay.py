@@ -8,7 +8,10 @@ to Showdown; the browser only downloads the static viewer.
 from __future__ import annotations
 
 import html
+import re
 from pathlib import Path
+
+from pokerl import TEAM_COLOR
 
 TEMPLATE = """<!DOCTYPE html>
 <meta charset="utf-8" />
@@ -30,27 +33,29 @@ document.write('<script src="https://play.pokemonshowdown.com/js/replay-embed.js
 
 
 def chat_lines(record: dict) -> dict[int, list[str]]:
-    """Each team's private talk and choices as Showdown chat lines, keyed by where they go in the log.
+    """Each team's private talk and choices as colored log lines, keyed by where they go in the log.
 
     The talk for a decision happened just before the log reached that decision's `log_index`,
     so the replay viewer shows it right before the moves it led to.
     """
     log_index = {step: entry["log_index"] for step, entry in enumerate(record["steps"])}
     lines: dict[int, list[str]] = {}
-    for side in record["sides"].values():
+    for side_name, side in record["sides"].items():
         if side["kind"] != "talking":
             continue
         for event in side["transcript"]:
-            name = side["agents"][event["seat"]]
+            speaker = html.escape(record["players"][event["seat"]])
             if event["event"] == "say":
-                text = event["text"]
+                body = f"<strong>{speaker}:</strong> {html.escape(event['text'])}"
             elif event["event"] == "choose":
-                text = f"[chose {event['label']}]"
+                body = f"<em>{speaker} chose {html.escape(event['label'])}</em>"
             else:
                 continue
-            # A chat line is one protocol line: no newlines, and "|" would end the message early.
-            text = " ".join(text.split()).replace("|", "/")
-            lines.setdefault(log_index[event["step"]], []).append(f"|c|☆{name}|{text}")
+            # One protocol line: no newlines, and a "|" would end the line early.
+            body = " ".join(body.split()).replace("|", "/")
+            # Showdown's own message styles: broadcast-blue and broadcast-red.
+            line = f'|raw|<div class="broadcast-{TEAM_COLOR[side_name].lower()}">{body}</div>'
+            lines.setdefault(log_index[event["step"]], []).append(line)
     return lines
 
 
@@ -70,7 +75,8 @@ def replay_html(record: dict, format_name: str = "[Gen 9] Multi Random Battle") 
         f"{players['p1']} + {players['p3']} vs. {players['p2']} + {players['p4']}"
         f" | winner: {record['winning_side']} | {record['turns']} turns"
     )
-    log = "\n".join(log_with_chat(record)).replace("</", "<\\/")
+    # The log sits inside a <script> element, and only "</script" could end it early.
+    log = re.sub(r"</(script)", r"<\\/\1", "\n".join(log_with_chat(record)), flags=re.IGNORECASE)
     return TEMPLATE.format(
         title=html.escape(record["battle_key"]),
         replay_id=html.escape(record["battle_key"]),

@@ -7,7 +7,7 @@ import traceback
 from collections import Counter
 from pathlib import Path
 
-from pokerl import SIDES
+from pokerl import PLAYER, SIDES
 from pokerl.bots import POLICIES, BotSide, make_policy
 from pokerl.bridge import Bridge
 from pokerl.dex import Dex
@@ -17,9 +17,6 @@ from pokerl.models import MODELS, BudgetExceeded, ChatClient, output_tokens
 from pokerl.runner import play
 from pokerl.talk import MAX_MESSAGES, TalkingTeam
 from pokerl.teams import BattleSpec
-
-# Teammate names per side. Both teammates get the same prompt apart from these.
-NAMES = {"p1": "Alex", "p3": "Sam", "p2": "Jordan", "p4": "Casey"}
 
 
 def check_player(player: str) -> None:
@@ -34,10 +31,10 @@ def make_side(side: str, player: str, clients: dict[str, ChatClient], dex: Dex):
         return BotSide({first: make_policy(player), second: make_policy(player)})
     client = clients.setdefault(player, ChatClient(player))
     agents = {
-        first: LLMAgent(NAMES[first], NAMES[second], client),
-        second: LLMAgent(NAMES[second], NAMES[first], client),
+        first: LLMAgent(PLAYER[first], PLAYER[second], client),
+        second: LLMAgent(PLAYER[second], PLAYER[first], client),
     }
-    return TalkingTeam(agents, dex)
+    return TalkingTeam(agents, dex, label=player)
 
 
 def run_llm_batch(specs: list[BattleSpec], side_a: str, side_b: str, out_path: Path) -> list[dict]:
