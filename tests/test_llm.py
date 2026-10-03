@@ -4,6 +4,7 @@ import pytest
 
 from pokerl.llm_agent import LLMAgent
 from pokerl.models import BudgetExceeded, ChatClient, Completion, Ledger, load_env
+from pokerl.prompts import system_prompt
 from pokerl.talk import Choose, InvalidReply, Say
 
 
@@ -38,7 +39,7 @@ def test_say_then_choose_threads_tool_results():
     client = FakeClient(
         assistant(tool_call("a", "say", message="Hit Mewtwo?")), assistant(tool_call("b", "choose", option=2))
     )
-    agent = LLMAgent("Alex", "Sam", client)
+    agent = LLMAgent("Alex", client, system_prompt("Alex", "Sam"))
     assert agent.respond("Turn 1. You speak first.") == Say("Hit Mewtwo?")
     assert agent.respond('Sam says: "Yes."') == Choose(2)
     agent.finish("")
@@ -53,7 +54,7 @@ def test_next_round_starts_with_a_user_message():
     client = FakeClient(
         assistant(tool_call("a", "choose", option=1)), assistant(tool_call("b", "choose", option=1))
     )
-    agent = LLMAgent("Alex", "Sam", client)
+    agent = LLMAgent("Alex", client, system_prompt("Alex", "Sam"))
     agent.respond("Turn 1.")
     agent.finish("")
     agent.respond("Turn 2.")
@@ -64,7 +65,7 @@ def test_reply_without_a_tool_call_is_invalid_and_feedback_is_a_user_message():
     client = FakeClient(
         assistant(content="I think I'll attack."), assistant(tool_call("a", "choose", option=1))
     )
-    agent = LLMAgent("Alex", "Sam", client)
+    agent = LLMAgent("Alex", client, system_prompt("Alex", "Sam"))
     with pytest.raises(InvalidReply):
         agent.respond("Turn 1.")
     assert agent.respond("That did not work: call say or choose.") == Choose(1)
@@ -76,7 +77,7 @@ def test_two_tool_calls_are_invalid_and_both_get_results():
         assistant(tool_call("a", "say", message="hi"), tool_call("b", "choose", option=1)),
         assistant(tool_call("c", "choose", option=1)),
     )
-    agent = LLMAgent("Alex", "Sam", client)
+    agent = LLMAgent("Alex", client, system_prompt("Alex", "Sam"))
     with pytest.raises(InvalidReply):
         agent.respond("Turn 1.")
     agent.respond("That did not work.")
@@ -87,7 +88,7 @@ def test_two_tool_calls_are_invalid_and_both_get_results():
 def test_option_as_digit_string_is_accepted_and_garbage_is_not():
     bad_json = {"id": "b", "type": "function", "function": {"name": "choose", "arguments": "{option: 3"}}
     client = FakeClient(assistant(tool_call("a", "choose", option="3")), assistant(bad_json))
-    agent = LLMAgent("Alex", "Sam", client)
+    agent = LLMAgent("Alex", client, system_prompt("Alex", "Sam"))
     assert agent.respond("Turn 1.") == Choose(3)
     agent.finish("")
     with pytest.raises(InvalidReply):
@@ -160,15 +161,26 @@ def test_talk_guidance_is_on_by_default_and_can_be_turned_off():
     assert "TALKING AND CHOOSING\n- Before acting" in plain
 
 
-def test_a_team_can_mix_two_models():
+def test_sides_for_each_condition():
+    from pokerl.llm_agent import CHOOSE_ONLY
     from pokerl.llm_batch import make_side
+    from pokerl.talk import SoloTeam, TalkingTeam
 
-    clients = {}
-    team = make_side("p1p3", "gemini-3.8-flash+gemini-3.1-flash-lite", clients, dex=None)
-    assert team.names() == {"p1": "Blue 1 - gemini-3.8-flash", "p3": "Blue 2 - gemini-3.1-flash-lite"}
-    assert sorted(clients) == ["gemini-3.1-flash-lite", "gemini-3.8-flash"]
-    same = make_side("p2p4", "gemini-3.5-flash-lite", clients, dex=None)
-    assert same.names() == {"p2": "Red 1 - gemini-3.5-flash-lite", "p4": "Red 2 - gemini-3.5-flash-lite"}
+    clients = {
+        name: FakeClient() for name in ("gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite")
+    }
+    mixed = make_side("p1p3", "gemini-3.8-flash+gemini-3.1-flash-lite", "free", clients, dex=None)
+    assert mixed.names() == {"p1": "Blue 1 - gemini-3.8-flash", "p3": "Blue 2 - gemini-3.1-flash-lite"}
+    silent = make_side("p2p4", "gemini-3.5-flash-lite", "no-talk", clients, dex=None)
+    assert isinstance(silent, TalkingTeam) and silent.mode == "no-talk"
+    assert silent.agents["p2"].tools == CHOOSE_ONLY
+    assert "cannot talk to each other" in silent.agents["p2"].messages[0]["content"]
+    solo = make_side("p1p3", "gemini-3.8-flash", "solo", clients, dex=None)
+    assert isinstance(solo, SoloTeam) and solo.names() == {
+        "p1": "Blue 1 - gemini-3.8-flash",
+        "p3": "Blue 2 - gemini-3.8-flash",
+    }
+    assert "You control both players" in solo.agent.messages[0]["content"]
 
 
 def test_prompt_states_the_chosen_talk_rule():

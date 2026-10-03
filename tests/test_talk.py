@@ -1,5 +1,6 @@
 import random
 import re
+from collections import Counter
 
 import pytest
 
@@ -8,7 +9,7 @@ from pokerl.bridge import Bridge
 from pokerl.dex import Dex
 from pokerl.env import MultiBattleEnv
 from pokerl.runner import play
-from pokerl.talk import MAX_MESSAGES, Choose, InvalidReply, Say, ScriptedAgent, TalkingTeam
+from pokerl.talk import MAX_MESSAGES, Choose, InvalidReply, Say, ScriptedAgent, SoloTeam, TalkingTeam
 from pokerl.teams import load_pool, make_specs
 
 
@@ -189,3 +190,68 @@ def test_after_choosing_a_player_can_still_answer_its_partner(bridge):
 
 def test_first_rule_ends_the_talk_at_the_first_choice(bridge):
     assert first_round(bridge, keep_talking=False) == [("p3", "choose"), ("p1", "invalid"), ("p1", "choose")]
+
+
+def play_condition(bridge, label: str, mode: str, script_for) -> tuple[dict, dict]:
+    """A scripted Blue side in `mode` against max-power bots; returns the record and the agents."""
+    env = MultiBattleEnv(bridge)
+    spec = make_specs(load_pool(), 1, label, mirror=False)[0]
+    if mode == "solo":
+        agents = {"solo": ScriptedAgent("Blue", None)}
+        agents["solo"].script = script_for(agents["solo"])
+        side = SoloTeam(agents["solo"], ("p1", "p3"), Dex(bridge))
+    else:
+        agents = {"p1": ScriptedAgent("Alex", None), "p3": ScriptedAgent("Sam", None)}
+        for agent in agents.values():
+            agent.script = script_for(agent)
+        side = TalkingTeam(agents, Dex(bridge), mode=mode)
+    record = play(env, spec, {"p1p3": side, "p2p4": BotSide({"p2": MaxPowerBot(), "p4": MaxPowerBot()})})
+    return record, agents
+
+
+def choose_at_random(agent: ScriptedAgent):
+    rng = random.Random(agent.name)
+
+    def script(text: str):
+        observation = next(t for t in reversed(agent.inputs) if t.startswith("Turn "))
+        listed = option_count(text) or option_count(observation)
+        return Choose(rng.randint(1, listed))
+
+    return script
+
+
+def test_no_talk_agents_never_talk_or_see_each_others_choices(bridge):
+    record, agents = play_condition(bridge, "cond-silent", "no-talk", choose_at_random)
+    events = [e["event"] for e in record["sides"]["p1p3"]["transcript"]]
+    assert record["winning_side"] in ("p1p3", "p2p4")
+    assert "say" not in events and "invalid" not in events
+    assert not any("chose:" in text for agent in agents.values() for text in agent.inputs)
+
+
+def test_one_message_each_then_private_choices(bridge):
+    record, agents = play_condition(bridge, "cond-one", "one-message", talk_once_then_choose)
+    transcript = record["sides"]["p1p3"]["transcript"]
+    assert record["winning_side"] in ("p1p3", "p2p4")
+    says = Counter((e["step"], e["seat"]) for e in transcript if e["event"] == "say")
+    assert says and max(says.values()) == 1
+    assert not any(e["event"] == "invalid" for e in transcript)
+    assert not any("chose:" in text for agent in agents.values() for text in agent.inputs)
+
+
+def test_one_model_controls_both_players(bridge):
+    record, agents = play_condition(bridge, "cond-solo", "solo", choose_at_random)
+    transcript = record["sides"]["p1p3"]["transcript"]
+    assert record["winning_side"] in ("p1p3", "p2p4")
+    assert {e["seat"] for e in transcript if e["event"] == "choose"} == {"p1", "p3"}
+    assert not any(e["event"] in ("invalid", "fallback") for e in transcript)
+    assert any("Choose the action for Blue 2." in text for text in agents["solo"].inputs)
+
+
+def test_batches_run_in_parallel_and_resume_without_replaying_battles(tmp_path):
+    from pokerl.llm_batch import run_llm_batch
+
+    specs = make_specs(load_pool(), 2, "resume-test")
+    path = tmp_path / "battles.jsonl"
+    assert len(run_llm_batch(specs[:3], "random", "maxpower", path, workers=2)) == 3
+    assert len(run_llm_batch(specs, "random", "maxpower", path, workers=2)) == 4
+    assert len(path.read_text(encoding="utf-8").splitlines()) == 4
