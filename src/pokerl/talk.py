@@ -48,6 +48,9 @@ class Agent(Protocol):
     def finish(self, text: str) -> None:
         """End the round: deliver anything left over without asking for a reply."""
 
+    def record(self) -> dict:
+        """What to keep in the battle log (conversation, model calls, ...)."""
+
 
 class ScriptedAgent:
     """An agent driven by a function; used to test the talk loop without a model."""
@@ -64,6 +67,9 @@ class ScriptedAgent:
     def finish(self, text: str) -> None:
         if text:
             self.inputs.append(text)
+
+    def record(self) -> dict:
+        return {"inputs": self.inputs}
 
 
 def still_playing(view: SeatView) -> bool:
@@ -90,7 +96,12 @@ class TalkingTeam:
         return {seat: agent.name for seat, agent in self.agents.items()}
 
     def record(self) -> dict:
-        return {"kind": "talking", "agents": self.names(), "transcript": self.transcript}
+        return {
+            "kind": "talking",
+            "agents": self.names(),
+            "transcript": self.transcript,
+            "agent_logs": {seat: agent.record() for seat, agent in self.agents.items()},
+        }
 
     def decide(
         self, env: MultiBattleEnv, seats: list[str], step: int, rejected: dict[str, str]

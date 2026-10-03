@@ -9,3 +9,4 @@ configs/private/
 .env
 CLAUDE.md
 docs/
+spend-ledger.json

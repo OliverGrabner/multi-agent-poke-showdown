@@ -1,4 +1,4 @@
-"""Command line: generate team pools, run bot batches, export replays, run the Phase 1 checks."""
+"""Command line: team pools, bot batches, LLM battles, replays, and the Phase 1 checks."""
 
 from __future__ import annotations
 
@@ -12,6 +12,9 @@ from pokerl import SEATS
 from pokerl.bots import RandomBot, step_rng
 from pokerl.bridge import Bridge
 from pokerl.env import MultiBattleEnv
+from pokerl.llm_agent import TOOLS
+from pokerl.llm_batch import run_llm_batch, summarize_talk
+from pokerl.models import MODELS, ChatClient, load_env
 from pokerl.replay import write_replay
 from pokerl.runner import bot_sides, play, run_batch, summarize
 from pokerl.teams import DEFAULT_POOL, generate_pool, load_pool, make_specs
@@ -129,6 +132,47 @@ def cmd_check(args: argparse.Namespace) -> None:
     print(json.dumps(report, indent=1))
 
 
+def cmd_model_check(args: argparse.Namespace) -> None:
+    """One tiny request to confirm the endpoint, tool calling and cost accounting work."""
+    load_env()
+    client = ChatClient(args.model)
+    messages = [
+        {"role": "system", "content": "This is a connection test. Call say with the message 'ready'."},
+        {"role": "user", "content": "Go."},
+    ]
+    completion = client.complete(messages, TOOLS)
+    print(
+        json.dumps(
+            {"reply": completion.message, "usage": completion.usage, "cost_usd": completion.cost}, indent=1
+        )
+    )
+    print(f"Total spent with {client.config.key_env}: ${client.ledger.total(client.config.key_env):.4f}")
+
+
+def cmd_llm(args: argparse.Namespace) -> None:
+    """An LLM team (p1 + p3) against scripted bots."""
+    load_env()
+    out_dir = Path(args.out_dir) / args.label
+    battles = out_dir / "battles.jsonl"
+    if battles.exists():
+        raise SystemExit(f"{battles} exists; pick a new --label")
+    specs = make_specs(load_pool(args.pool), args.battles, args.label, mirror=False)
+    start = time.perf_counter()
+    records = run_llm_batch(specs, args.model, args.opponent, battles)
+    summary = {
+        "model": args.model,
+        "opponent": args.opponent,
+        **summarize(records),
+        **summarize_talk(records),
+        "seconds": round(time.perf_counter() - start, 1),
+    }
+    (out_dir / "summary.json").write_text(json.dumps(summary, indent=1) + "\n", encoding="utf-8")
+    for record in records:
+        if "crash" not in record:
+            write_replay(record, out_dir / "replays" / f"{record['battle_key']}.html")
+    print(json.dumps(summary, indent=1))
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="pokerl")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -161,6 +205,19 @@ def main(argv: list[str] | None = None) -> None:
     check.add_argument("--pairs", type=int, default=500, help="max-power vs random seeds (x2 mirrored)")
     check.add_argument("--repro", type=int, default=20, help="battles for the reproducibility checks")
     check.set_defaults(func=cmd_check)
+
+    model_check = sub.add_parser("model-check", help="one tiny request to test a model connection")
+    model_check.add_argument("--model", required=True, choices=sorted(MODELS))
+    model_check.set_defaults(func=cmd_model_check)
+
+    llm = sub.add_parser("llm", help="an LLM team (p1 + p3) against scripted bots")
+    llm.add_argument("--model", required=True, choices=sorted(MODELS))
+    llm.add_argument("--label", required=True, help="names the output folder and seeds the battles")
+    llm.add_argument("--battles", type=int, default=1)
+    llm.add_argument("--opponent", default="random", help="bot policy for p2 and p4")
+    llm.add_argument("--pool", default=str(DEFAULT_POOL))
+    llm.add_argument("--out-dir", default="runs")
+    llm.set_defaults(func=cmd_llm)
 
     for command in (run, check):
         command.add_argument("--pool", default=str(DEFAULT_POOL))

@@ -7,7 +7,7 @@ name = "pokerl"
 version = "0.1.0"
 description = "LLM teammates in Pokemon Showdown 4-player Multi Battles"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["httpx>=0.28,<1"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "ruff>=0.12,<1"]
