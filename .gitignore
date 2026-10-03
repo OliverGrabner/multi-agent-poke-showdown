@@ -8,3 +8,4 @@ runs/
 configs/private/
 .env
 CLAUDE.md
+docs/
