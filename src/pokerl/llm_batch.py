@@ -20,21 +20,33 @@ from pokerl.teams import BattleSpec
 
 
 def check_player(player: str) -> None:
-    if player not in MODELS and player not in POLICIES:
-        raise ValueError(f"{player!r} is neither a model ({sorted(MODELS)}) nor a bot ({sorted(POLICIES)})")
+    """A bot policy, a model name, or two model names joined by '+' (one per teammate)."""
+    if player in POLICIES:
+        return
+    for model in player.split("+"):
+        if model not in MODELS:
+            raise ValueError(
+                f"{model!r} is neither a model ({sorted(MODELS)}) nor a bot ({sorted(POLICIES)})"
+            )
 
 
 def make_side(side: str, player: str, clients: dict[str, ChatClient], dex: Dex):
-    """A TalkingTeam if `player` is a model name, else a BotSide of that policy."""
+    """A BotSide for a bot policy, else a TalkingTeam. 'a+b' gives the first seat model a, the second b."""
     first, second = SIDES[side]
     if player in POLICIES:
         return BotSide({first: make_policy(player), second: make_policy(player)})
-    client = clients.setdefault(player, ChatClient(player))
+    models = player.split("+")
+    if len(models) == 1:
+        models = models * 2
+    seat_models = {first: models[0], second: models[1]}
+    for model in models:
+        if model not in clients:
+            clients[model] = ChatClient(model)
     agents = {
-        first: LLMAgent(PLAYER[first], PLAYER[second], client),
-        second: LLMAgent(PLAYER[second], PLAYER[first], client),
+        first: LLMAgent(PLAYER[first], PLAYER[second], clients[seat_models[first]]),
+        second: LLMAgent(PLAYER[second], PLAYER[first], clients[seat_models[second]]),
     }
-    return TalkingTeam(agents, dex, label=player)
+    return TalkingTeam(agents, dex, labels=seat_models)
 
 
 def run_llm_batch(specs: list[BattleSpec], side_a: str, side_b: str, out_path: Path) -> list[dict]:

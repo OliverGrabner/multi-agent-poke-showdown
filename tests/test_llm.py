@@ -158,3 +158,14 @@ def test_talk_guidance_is_on_by_default_and_can_be_turned_off():
     plain = system_prompt("Blue 1", "Blue 2", talk_guidance=False)
     assert "Talking is how your team plans together." not in plain
     assert "TALKING AND CHOOSING\n- Before acting" in plain
+
+
+def test_a_team_can_mix_two_models():
+    from pokerl.llm_batch import make_side
+
+    clients = {}
+    team = make_side("p1p3", "gemini-3.8-flash+gemini-3.1-flash-lite", clients, dex=None)
+    assert team.names() == {"p1": "Blue 1 - gemini-3.8-flash", "p3": "Blue 2 - gemini-3.1-flash-lite"}
+    assert sorted(clients) == ["gemini-3.1-flash-lite", "gemini-3.8-flash"]
+    same = make_side("p2p4", "gemini-3.5-flash-lite", clients, dex=None)
+    assert same.names() == {"p2": "Red 1 - gemini-3.5-flash-lite", "p4": "Red 2 - gemini-3.5-flash-lite"}

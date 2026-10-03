@@ -86,16 +86,22 @@ def add(inbox: dict[str, str], seat: str, text: str) -> None:
 class TalkingTeam:
     """Controls one side with two agents that talk before choosing."""
 
-    def __init__(self, agents: dict[str, Agent], dex: Dex, label: str = "", max_messages: int = MAX_MESSAGES):
+    def __init__(
+        self,
+        agents: dict[str, Agent],
+        dex: Dex,
+        labels: dict[str, str] | None = None,
+        max_messages: int = MAX_MESSAGES,
+    ):
         self.agents = agents
-        self.label = label  # shown after each player's name in the battle, e.g. the model
+        self.labels = labels or {}  # per seat, shown after the player's name in the battle (the model)
         self.max_messages = max_messages
         self.observers = {seat: Observer(seat, agents[ALLY[seat]].name, dex) for seat in agents}
         self.transcript: list[dict] = []
 
     def names(self) -> dict[str, str]:
         return {
-            seat: f"{agent.name} - {self.label}" if self.label else agent.name
+            seat: f"{agent.name} - {self.labels[seat]}" if seat in self.labels else agent.name
             for seat, agent in self.agents.items()
         }
 

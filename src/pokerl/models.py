@@ -42,6 +42,16 @@ MODELS = {
         price_out=1.50,
         budget=2.00,
     ),
+    # A middle-tier Gemini for demos.
+    "gemini-3.5-flash-lite": ModelConfig(
+        model="gemini-3.5-flash-lite",
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai",
+        key_env="gemini_key",
+        price_in=0.30,
+        price_cached=0.03,
+        price_out=2.50,
+        budget=2.00,
+    ),
     # The stronger Gemini for the strong-vs-weak demo. Promotional prices through 2026-12-31.
     "gemini-3.8-flash": ModelConfig(
         model="gemini-3.8-flash",
