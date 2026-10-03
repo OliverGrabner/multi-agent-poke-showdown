@@ -20,10 +20,15 @@ fi
 uv venv --allow-existing --python 3.12 .venv
 uv pip install --python .venv/bin/python -e ".[dev]"
 
-# vLLM gets its own environment; managed Python ships the headers Triton needs.
-uv venv --allow-existing --python 3.12 --seed .venv-vllm
-uv pip install --python .venv-vllm/bin/python "vllm${VLLM_VERSION:+==$VLLM_VERSION}"
-.venv-vllm/bin/python -m pip freeze > "runs/setup-${SLURM_JOB_ID}-packages.txt"
+# vLLM gets its own environment (managed Python ships the headers Triton needs), stored as one
+# archive that each job unpacks to local disk. Delete the archive to rebuild or upgrade it.
+if [[ ! -f $VLLM_ARCHIVE ]]; then
+  uv venv --allow-existing --python 3.12 --seed .venv-vllm
+  uv pip install --python .venv-vllm/bin/python "vllm${VLLM_VERSION:+==$VLLM_VERSION}"
+  .venv-vllm/bin/python -m pip freeze > "runs/setup-${SLURM_JOB_ID}-packages.txt"
+  tar -cf "$VLLM_ARCHIVE" .venv-vllm
+  rm -rf .venv-vllm
+fi
 
 if [[ ! -x .tools/node/bin/node ]]; then
   curl -LsSf "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" | tar -xJ -C .tools
@@ -32,7 +37,8 @@ fi
 (cd bridge && npm ci --no-audit --no-fund)
 
 download() {
-  .venv-vllm/bin/python -c 'import sys; from huggingface_hub import snapshot_download; snapshot_download(sys.argv[1])' "$1"
+  uv run --no-project --python 3.12 --with huggingface_hub python -c \
+    'import sys; from huggingface_hub import snapshot_download; snapshot_download(sys.argv[1])' "$1"
 }
 download Qwen/Qwen3.8-27B
 # The second family is optional; its weights may need a license accepted on Hugging Face first.

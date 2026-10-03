@@ -10,7 +10,13 @@ export UV_PYTHON_INSTALL_DIR="$PWD/cache/python"
 export UV_MANAGED_PYTHON=true
 export XDG_CACHE_HOME="$PWD/cache"
 export HF_HOME="$PWD/cache/huggingface"
+# Compiled GPU kernels are kept between jobs so later servers start faster.
 export FLASHINFER_WORKSPACE_BASE="$PWD/cache"
+export TRITON_CACHE_DIR="$PWD/cache/triton"
+export TORCHINDUCTOR_CACHE_DIR="$PWD/cache/torchinductor"
+# The vLLM environment is stored as one archive (scratch is slow at opening many small files, and
+# limits their number); each job unpacks it to the node's local disk.
+export VLLM_ARCHIVE="$PWD/cache/venv-vllm.tar"
 # Battles talk to the model server on this node; keep that traffic away from the web proxy.
 export NO_PROXY="127.0.0.1,localhost${NO_PROXY:+,$NO_PROXY}"
 export no_proxy="$NO_PROXY"
