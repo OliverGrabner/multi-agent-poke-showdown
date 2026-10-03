@@ -132,7 +132,7 @@ def test_observation_lists_every_legal_option(bridge):
 
 
 def test_replay_shows_both_teams_chat_before_the_moves_it_led_to(bridge):
-    from pokerl.replay import NAME_COLOR, log_with_chat
+    from pokerl.replay import log_with_chat
 
     env = MultiBattleEnv(bridge)
     spec = make_specs(load_pool(), 1, "talk-replay", mirror=False)[0]
@@ -151,9 +151,8 @@ def test_replay_shows_both_teams_chat_before_the_moves_it_led_to(bridge):
         e for side in record["sides"].values() for e in side["transcript"] if e["event"] in ("say", "choose")
     ]
     assert len(chats) == len(talk_events)
-    red, blue = NAME_COLOR["Red"], NAME_COLOR["Blue"]
-    assert any(f'<strong style="color:{red}">Jordan</strong>:' in line for line in chats)
-    assert any(f'<strong style="color:{blue}">Alex</strong> <em>chose ' in line for line in chats)
+    assert any('<strong class="team-red">Jordan</strong>:' in line for line in chats)
+    assert any('<strong class="team-blue">Alex</strong> <em>chose ' in line for line in chats)
     # Turn 1's talk comes after the "turn 1" marker and before any move of turn 1.
     first_chat = merged.index(chats[0])
     assert (

@@ -17,7 +17,12 @@ TEMPLATE = """<!DOCTYPE html>
 <meta charset="utf-8" />
 <!-- version 1 -->
 <title>{title}</title>
-<style>body {{font-family: Verdana, sans-serif; font-size: 10pt; margin: 0; padding: 12px 0;}}</style>
+<style>
+body {{font-family: Verdana, sans-serif; font-size: 10pt; margin: 0; padding: 12px 0;}}
+/* Team colors for speaker names in the team chat; !important beats Showdown's own chat styles. */
+.battle-log strong.team-blue {{color: #3b82f6 !important;}}
+.battle-log strong.team-red {{color: #ef4444 !important;}}
+</style>
 <div class="wrapper replay-wrapper" style="max-width:1180px;margin:0 auto">
 <input type="hidden" name="replayid" value="{replay_id}" />
 <div class="battle"></div><div class="battle-log"></div><div class="replay-controls"></div>
@@ -32,9 +37,6 @@ document.write('<script src="https://play.pokemonshowdown.com/js/replay-embed.js
 """
 
 
-NAME_COLOR = {"Blue": "#1d4ed8", "Red": "#b91c1c"}
-
-
 def chat_lines(record: dict) -> dict[int, list[str]]:
     """Each team's private talk and choices as log lines, keyed by where they go in the log.
 
@@ -46,11 +48,10 @@ def chat_lines(record: dict) -> dict[int, list[str]]:
     for side_name, side in record["sides"].items():
         if side["kind"] != "talking":
             continue
-        color = NAME_COLOR[TEAM_COLOR[side_name]]
+        # Showdown strips inline colors but keeps classes; the page's CSS colors these.
+        team_class = f"team-{TEAM_COLOR[side_name].lower()}"
         for event in side["transcript"]:
-            speaker = (
-                f'<strong style="color:{color}">{html.escape(record["players"][event["seat"]])}</strong>'
-            )
+            speaker = f'<strong class="{team_class}">{html.escape(record["players"][event["seat"]])}</strong>'
             if event["event"] == "say":
                 body = f"{speaker}: {html.escape(event['text'])}"
             elif event["event"] == "choose":
