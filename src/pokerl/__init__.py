@@ -1,0 +1,8 @@
+"""LLM teammates in Pokemon Showdown 4-player Multi Battles."""
+
+FORMAT = "gen9multirandombattle"
+SEATS = ("p1", "p2", "p3", "p4")
+# Seats p1 and p3 share a side, as do p2 and p4.
+SIDES = {"p1p3": ("p1", "p3"), "p2p4": ("p2", "p4")}
+ALLY = {"p1": "p3", "p3": "p1", "p2": "p4", "p4": "p2"}
+FOES = {"p1": ("p2", "p4"), "p3": ("p2", "p4"), "p2": ("p1", "p3"), "p4": ("p1", "p3")}

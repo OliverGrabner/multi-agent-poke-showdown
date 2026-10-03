@@ -1,0 +1,327 @@
+{
+ "format": "gen9multirandombattle",
+ "label": "v1",
+ "showdown_version": "0.11.11",
+ "teams": [
+  {
+   "id": "v1-000",
+   "seed": "sodium,6912642487db524cce706ebfef36cb82",
+   "packed": "Clefable||RockyHelmet|Unaware|moonblast,moonlight,followme,knockoff||85,85,85,85,85,85|F|||87|,,,,,Water]Palafin||ChoiceBand|ZerotoHero|closecombat,flipturn,wavecrash,jetpunch||85,85,85,85,85,85|F|||80|,,,,,Water]Glastrier||SitrusBerry|ChillingNeigh|protect,heavyslam,highhorsepower,iciclecrash||85,85,85,85,85,85|N|||80|,,,,,Steel",
+   "species": [
+    "Clefable",
+    "Palafin",
+    "Glastrier"
+   ]
+  },
+  {
+   "id": "v1-001",
+   "seed": "sodium,b27a6af548956ff68e1e4996522e14b7",
+   "packed": "Kingdra||LifeOrb|SwiftSwim|dracometeor,muddywater,protect,raindance||85,,85,85,85,85|M|,0,,,,||85|,,,,,Water]Thundurus|ThundurusTherian|FocusSash|VoltAbsorb|wildboltstorm,protect,sludgebomb,voltswitch||85,,85,85,85,85|M|,0,,,,||78|,,,,,Poison]Talonflame||SitrusBerry|GaleWings|uturn,bravebird,tailwind,overheat||85,85,85,85,85,85|F|||82|,,,,,Flying",
+   "species": [
+    "Kingdra",
+    "Thundurus-Therian",
+    "Talonflame"
+   ]
+  },
+  {
+   "id": "v1-002",
+   "seed": "sodium,5e4322885d359bd58410bc95ddfc5f35",
+   "packed": "Miraidon||LifeOrb|HadronEngine|electrodrift,voltswitch,protect,dragonpulse||85,,85,85,85,85|N|,0,,,,||65|,,,,,Electric]Oricorio|OricorioSensu|Leftovers|Dancer|revelationdance,airslash,protect,quiverdance||85,,85,85,85,85|M|,0,,,,||87|,,,,,Ground]Hatterene||LifeOrb|MagicBounce|dazzlinggleam,psychic,mysticalfire,trickroom||85,,85,85,85,|F|,0,,,,0||84|,,,,,Psychic",
+   "species": [
+    "Miraidon",
+    "Oricorio-Sensu",
+    "Hatterene"
+   ]
+  },
+  {
+   "id": "v1-003",
+   "seed": "sodium,8ee1b81f50d7772dc849767f13527fd3",
+   "packed": "Cobalion||SitrusBerry|Justified|voltswitch,bodypress,thunderwave,ironhead||85,85,85,85,85,85|N|||79|,,,,,Flying]Gholdengo||SitrusBerry|GoodasGold|nastyplot,shadowball,makeitrain,protect||85,,85,85,85,85|N|,0,,,,||78|,,,,,Water]Drifblim||SitrusBerry|Unburden|shadowball,tailwind,willowisp,strengthsap||85,,85,85,85,85|M|,0,,,,||85|,,,,,Ground",
+   "species": [
+    "Cobalion",
+    "Gholdengo",
+    "Drifblim"
+   ]
+  },
+  {
+   "id": "v1-004",
+   "seed": "sodium,2eac7f3153701e788c0ca31bc77e54ce",
+   "packed": "Porygon-Z||LifeOrb|Adaptability|nastyplot,terablast,protect,shadowball||85,,85,85,85,85|N|,0,,,,||84|,,,,,Fighting]Delphox||LifeOrb|Blaze|nastyplot,heatwave,psychic,protect||85,,85,85,85,85|F|,0,,,,||83|,,,,,Fire]Virizion||SitrusBerry|Justified|coaching,leafstorm,protect,closecombat||85,85,85,85,85,85|N|||86|,,,,,Fire",
+   "species": [
+    "Porygon-Z",
+    "Delphox",
+    "Virizion"
+   ]
+  },
+  {
+   "id": "v1-005",
+   "seed": "sodium,8a02105721a319f811e37a36f51a8ae2",
+   "packed": "Dewgong||SitrusBerry|ThickFat|fakeout,icywind,hydropump,encore||85,85,85,85,85,85|M|||91|,,,,,Grass]Dugtrio||FocusSash|ArenaTrap|endeavor,stompingtantrum,rockslide,protect||85,85,85,85,85,85|F|||91|,,,,,Ghost]Infernape||FocusSash|Blaze|closecombat,protect,fakeout,overheat||85,85,85,85,85,85|M|||82|,,,,,Fighting",
+   "species": [
+    "Dewgong",
+    "Dugtrio",
+    "Infernape"
+   ]
+  },
+  {
+   "id": "v1-006",
+   "seed": "sodium,13b95fad36772aa634a80e267ba57add",
+   "packed": "Coalossal||SitrusBerry|FlameBody|stoneedge,incinerate,heatwave,willowisp||85,85,85,85,85,85|F|||90|,,,,,Water]Cacturne||LifeOrb|WaterAbsorb|knockoff,suckerpunch,spikyshield,leafstorm||85,85,85,85,85,85|M|||91|,,,,,Dark]Kyogre||ChoiceScarf|Drizzle|icebeam,waterspout,originpulse,thunder||85,,85,85,85,85|N|,0,,,,||65|,,,,,Water",
+   "species": [
+    "Coalossal",
+    "Cacturne",
+    "Kyogre"
+   ]
+  },
+  {
+   "id": "v1-007",
+   "seed": "sodium,a567e87709afc5f7415767c834320cb4",
+   "packed": "Sneasler||FocusSash|PoisonTouch|fakeout,throatchop,direclaw,closecombat||85,85,85,85,85,85|F|||76|,,,,,Poison]Rampardos||ChoiceScarf|SheerForce|headsmash,firepunch,stompingtantrum,rockslide||85,85,85,85,85,85|F|||87|,,,,,Rock]Masquerain||HeavyDutyBoots|Intimidate|bugbuzz,hydropump,hurricane,quiverdance||85,,85,85,85,85|M|,0,,,,||90|,,,,,Water",
+   "species": [
+    "Sneasler",
+    "Rampardos",
+    "Masquerain"
+   ]
+  },
+  {
+   "id": "v1-008",
+   "seed": "sodium,22ef7761e3787c5f0b36e685cd7e6985",
+   "packed": "Tsareena||AssaultVest|QueenlyMajesty|powerwhip,tripleaxel,highjumpkick,knockoff||85,85,85,85,85,85|F|||85|,,,,,Fire]Great Tusk||AssaultVest|Protosynthesis|closecombat,icespinner,rapidspin,headlongrush||85,85,85,85,85,85|N|||81|,,,,,Fire]Clefable||LifeOrb|MagicGuard|icywind,protect,fireblast,moonblast||85,,85,85,85,85|M|,0,,,,||87|,,,,,Steel",
+   "species": [
+    "Tsareena",
+    "Great Tusk",
+    "Clefable"
+   ]
+  },
+  {
+   "id": "v1-009",
+   "seed": "sodium,16e6a7d127728f2f7e9e4ac6ac2a89e6",
+   "packed": "Granbull||AssaultVest|Intimidate|closecombat,stompingtantrum,playrough,superfang||85,85,85,85,85,85|M|||88|,,,,,Steel]Weezing||SitrusBerry|Levitate|gunkshot,poisongas,fireblast,clearsmog||85,85,85,85,85,85|F|||91|,,,,,Dark]Galvantula||SitrusBerry|CompoundEyes|bugbuzz,stickyweb,thunder,protect||85,,85,85,85,85|M|,0,,,,||85|,,,,,Electric",
+   "species": [
+    "Granbull",
+    "Weezing",
+    "Galvantula"
+   ]
+  },
+  {
+   "id": "v1-010",
+   "seed": "sodium,efcd268418a4398325d22c4354296340",
+   "packed": "Darkrai||LifeOrb|BadDreams|protect,substitute,darkpulse,sludgebomb||85,,85,85,85,85|N|,0,,,,||80|,,,,,Poison]Revavroom||LifeOrb|Filter|highhorsepower,ironhead,shiftgear,gunkshot||85,85,85,85,85,85|M|||84|,,,,,Ground]Clawitzer||SitrusBerry|MegaLauncher|muddywater,aurasphere,protect,darkpulse||85,,85,85,85,85|M|,0,,,,||84|,,,,,Dark",
+   "species": [
+    "Darkrai",
+    "Revavroom",
+    "Clawitzer"
+   ]
+  },
+  {
+   "id": "v1-011",
+   "seed": "sodium,53cf68983730d5962031b641f6c060fe",
+   "packed": "Greedent||SitrusBerry|CheekPouch|knockoff,swordsdance,doubleedge,highhorsepower||85,85,85,85,85,85|F|||86|,,,,,Fairy]Spectrier||LifeOrb|GrimNeigh|terablast,protect,shadowball,nastyplot||85,,85,85,85,85|N|,0,,,,||77|,,,,,Fighting]Chien-Pao||LifeOrb|SwordofRuin|sacredsword,protect,suckerpunch,iciclecrash||85,85,85,85,85,85|N|||75|,,,,,Ghost",
+   "species": [
+    "Greedent",
+    "Spectrier",
+    "Chien-Pao"
+   ]
+  },
+  {
+   "id": "v1-012",
+   "seed": "sodium,a1a98fd61697e330926982edd24f8479",
+   "packed": "Rampardos||ChoiceScarf|SheerForce|firepunch,headsmash,rockslide,stompingtantrum||85,85,85,85,85,85|F|||87|,,,,,Rock]Camerupt||SitrusBerry|SolidRock|stealthrock,protect,heatwave,earthpower||85,,85,85,85,85|M|,0,,,,||88|,,,,,Water]Gliscor||ToxicOrb|PoisonHeal|protect,tailwind,dualwingbeat,highhorsepower||85,85,85,85,85,85|F|||81|,,,,,Water",
+   "species": [
+    "Rampardos",
+    "Camerupt",
+    "Gliscor"
+   ]
+  },
+  {
+   "id": "v1-013",
+   "seed": "sodium,49c3a1fcd9f2e0aa6ddc11e55c2a4067",
+   "packed": "Darkrai||LifeOrb|BadDreams|substitute,sludgebomb,protect,darkpulse||85,,85,85,85,85|N|,0,,,,||80|,,,,,Poison]Slowbro|SlowbroGalar|LifeOrb|Regenerator|trickroom,shellsidearm,fireblast,psychic||85,85,85,85,85,|M|,,,,,0||87|,,,,,Fire]Toxapex||Leftovers|Regenerator|infestation,recover,toxic,banefulbunker||85,,85,85,85,85|M|,0,,,,||92|,,,,,Steel",
+   "species": [
+    "Darkrai",
+    "Slowbro-Galar",
+    "Toxapex"
+   ]
+  },
+  {
+   "id": "v1-014",
+   "seed": "sodium,c99df4f4fd5584e9d2ef74b3b30075d5",
+   "packed": "Salamence||LifeOrb|Intimidate|protect,dualwingbeat,dracometeor,tailwind||85,85,85,85,85,85|M|||80|,,,,,Flying]Espathra||LifeOrb|SpeedBoost|shadowball,luminacrash,dazzlinggleam,protect||85,,85,85,85,85|F|,0,,,,||83|,,,,,Fairy]Luvdisc||SitrusBerry|SwiftSwim|hydropump,icywind,endeavor,charm||85,,85,85,85,85|F|,0,,,,|||,,,,,Dragon",
+   "species": [
+    "Salamence",
+    "Espathra",
+    "Luvdisc"
+   ]
+  },
+  {
+   "id": "v1-015",
+   "seed": "sodium,b4fb9b8f83384bd8ddc8469a53265e43",
+   "packed": "Decidueye||SitrusBerry|Overgrow|spiritshackle,tailwind,leafstorm,protect||85,85,85,85,85,85|M|||89|,,,,,Ghost]Tentacruel||SitrusBerry|ClearBody|muddywater,icywind,toxicspikes,sludgebomb||85,,85,85,85,85|M|,0,,,,||84|,,,,,Grass]Skarmory||Leftovers|Sturdy|bodypress,irondefense,bravebird,roost||85,85,85,85,85,85|M|||85|,,,,,Fighting",
+   "species": [
+    "Decidueye",
+    "Tentacruel",
+    "Skarmory"
+   ]
+  },
+  {
+   "id": "v1-016",
+   "seed": "sodium,4fb08690428ddc126d02de6ad83249c7",
+   "packed": "Crabominable||LifeOrb|IronFist|knockoff,icehammer,drainpunch,protect||85,85,85,85,85,85|M|||89|,,,,,Poison]Lunala||PowerHerb|ShadowShield|meteorbeam,moonblast,moongeistbeam,protect||85,,85,85,85,85|N|,0,,,,||71|,,,,,Fairy]Scrafty||SitrusBerry|Intimidate|closecombat,knockoff,fakeout,coaching||85,85,85,85,85,85|F|||83|,,,,,Poison",
+   "species": [
+    "Crabominable",
+    "Lunala",
+    "Scrafty"
+   ]
+  },
+  {
+   "id": "v1-017",
+   "seed": "sodium,bc6366abc0c7a186aa56837fbcd33ad1",
+   "packed": "Mabosstiff||ChoiceBand|Intimidate|playrough,crunch,firefang,psychicfangs||85,85,85,85,85,85|F|||84|,,,,,Fairy]Spiritomb||SitrusBerry|Infiltrator|willowisp,foulplay,icywind,helpinghand||85,,85,85,85,85|F|,0,,,,||89|,,,,,Steel]Noctowl||LifeOrb|TintedLens|protect,hurricane,tailwind,hypervoice||85,,85,85,85,85|M|,0,,,,||91|,,,,,Steel",
+   "species": [
+    "Mabosstiff",
+    "Spiritomb",
+    "Noctowl"
+   ]
+  },
+  {
+   "id": "v1-018",
+   "seed": "sodium,b33d3e735ce872812bdfec8412926365",
+   "packed": "Palafin||ChoiceBand|ZerotoHero|flipturn,wavecrash,closecombat,jetpunch||85,85,85,85,85,85|F|||80|,,,,,Water]Crawdaunt||LifeOrb|Adaptability|protect,crabhammer,knockoff,aquajet||85,85,85,85,85,85|F|||87|,,,,,Water]Flygon||LoadedDice|Levitate|protect,scaleshot,tailwind,earthpower||85,85,85,85,85,85|F|||83|,,,,,Steel",
+   "species": [
+    "Palafin",
+    "Crawdaunt",
+    "Flygon"
+   ]
+  },
+  {
+   "id": "v1-019",
+   "seed": "sodium,e69465be5fa22fe13c01d2e871c440e6",
+   "packed": "Volbeat||CovertCloak|Prankster|thunderwave,encore,lunge,tailwind||85,85,85,85,85,85|M|||82|,,,,,Water]Sylveon||Leftovers|Pixilate|protect,hypervoice,substitute,calmmind||85,,85,85,85,85|F|,0,,,,||78|,,,,,Steel]Phione||Leftovers|Hydration|scald,takeheart,icebeam,protect||85,,85,85,85,85|N|,0,,,,||90|,,,,,Steel",
+   "species": [
+    "Volbeat",
+    "Sylveon",
+    "Phione"
+   ]
+  },
+  {
+   "id": "v1-020",
+   "seed": "sodium,502f31570d2ebac23823a620f7786461",
+   "packed": "Sandaconda||SitrusBerry|ShedSkin|highhorsepower,glare,rest,stoneedge||85,85,85,85,85,85|F|||88|,,,,,Dragon]Toxtricity||ChoiceSpecs|PunkRock|voltswitch,overdrive,sludgebomb,psychicnoise||85,,85,85,85,85|M|,0,,,,||82|,,,,,Psychic]Rillaboom||AssaultVest|GrassySurge|grassyglide,uturn,woodhammer,fakeout||85,85,85,85,85,85|F|||81|,,,,,Grass",
+   "species": [
+    "Sandaconda",
+    "Toxtricity",
+    "Rillaboom"
+   ]
+  },
+  {
+   "id": "v1-021",
+   "seed": "sodium,0eea7b0fd7152b14dae0dc25cffcc5e5",
+   "packed": "Rhydon||Eviolite|LightningRod|highhorsepower,rockslide,protect,stealthrock||85,85,85,85,85,85|M|||86|,,,,,Grass]Wo-Chien||Leftovers|TabletsofRuin|protect,leechseed,knockoff,pollenpuff||85,85,85,85,85,85|N|||85|,,,,,Poison]Chandelure||LifeOrb|FlashFire|energyball,protect,heatwave,shadowball||85,,85,85,85,85|M|,0,,,,||81|,,,,,Grass",
+   "species": [
+    "Rhydon",
+    "Wo-Chien",
+    "Chandelure"
+   ]
+  },
+  {
+   "id": "v1-022",
+   "seed": "sodium,fe51b7a2680029cdfb9fdce5c3186f3a",
+   "packed": "Indeedee||LifeOrb|PsychicSurge|encore,expandingforce,hypervoice,protect||85,,85,85,85,85|M|,0,,,,||79|,,,,,Fairy]Sudowoodo||LifeOrb|RockHead|woodhammer,highhorsepower,suckerpunch,headsmash||85,85,85,85,85,85|M|||94|,,,,,Grass]Trevenant||SitrusBerry|Harvest|trickroom,poltergeist,woodhammer,protect||85,85,85,85,85,|M|,,,,,0||88|,,,,,Water",
+   "species": [
+    "Indeedee",
+    "Sudowoodo",
+    "Trevenant"
+   ]
+  },
+  {
+   "id": "v1-023",
+   "seed": "sodium,215d4d809d24f44ce541b9712b99827c",
+   "packed": "Mewtwo||Leftovers|Unnerve|nastyplot,psystrike,aurasphere,recover||85,,85,85,85,85|N|,0,,,,||73|,,,,,Fighting]Whiscash||SitrusBerry|Oblivious|muddywater,icywind,protect,highhorsepower||85,85,85,85,85,85|M|||88|,,,,,Steel]Azelf||ChoiceSpecs|Levitate|psychic,fireblast,dazzlinggleam,uturn||85,85,85,85,85,85|N|||83|,,,,,Fire",
+   "species": [
+    "Mewtwo",
+    "Whiscash",
+    "Azelf"
+   ]
+  },
+  {
+   "id": "v1-024",
+   "seed": "sodium,3833dd09cceaa61d4444afc339294cab",
+   "packed": "Raichu|RaichuAlola|LifeOrb|SurgeSurfer|protect,nastyplot,psychic,thunderbolt||85,,85,85,85,85|F|,0,,,,||89|,,,,,Dark]Heatran||SitrusBerry|FlashFire|terablast,heatwave,flashcannon,protect||85,,85,85,85,85|F|,0,,,,||78|,,,,,Grass]Dusknoir||LifeOrb|Frisk|protect,poltergeist,trickroom,leechlife||85,85,85,85,85,|F|,,,,,0||89|,,,,,Dark",
+   "species": [
+    "Raichu-Alola",
+    "Heatran",
+    "Dusknoir"
+   ]
+  },
+  {
+   "id": "v1-025",
+   "seed": "sodium,91f78098b4e43611bfc90185c0d4856a",
+   "packed": "Medicham||FocusSash|PurePower|closecombat,fakeout,icepunch,zenheadbutt||85,85,85,85,85,85|F|||86|,,,,,Fighting]Copperajah||AssaultVest|HeavyMetal|stoneedge,heatcrash,heavyslam,highhorsepower||85,85,85,85,85,85|M|||86|,,,,,Fire]Honchkrow||LifeOrb|Moxie|heatwave,protect,suckerpunch,bravebird||85,85,85,85,85,85|M|||85|,,,,,Dark",
+   "species": [
+    "Medicham",
+    "Copperajah",
+    "Honchkrow"
+   ]
+  },
+  {
+   "id": "v1-026",
+   "seed": "sodium,bd98667dca126da60d490d702c75e49f",
+   "packed": "Dondozo||AssaultVest|Unaware|heavyslam,wavecrash,avalanche,bodypress||85,85,85,85,85,85|F|||85|,,,,,Dragon]Froslass||WideLens|CursedBody|icywind,tripleaxel,protect,poltergeist||85,85,85,85,85,85|F|||88|,,,,,Water]Appletun||SitrusBerry|Ripen|dragonpulse,leechseed,appleacid,protect||85,,85,85,85,85|M|,0,,,,||92|,,,,,Steel",
+   "species": [
+    "Dondozo",
+    "Froslass",
+    "Appletun"
+   ]
+  },
+  {
+   "id": "v1-027",
+   "seed": "sodium,71bde6a0cca04cd983dde6cf1215e014",
+   "packed": "Drednaw||WhiteHerb|StrongJaw|liquidation,rockslide,crunch,shellsmash||85,85,85,85,85,85|F|||83|,,,,,Dark]Lucario||LifeOrb|InnerFocus|protect,closecombat,flashcannon,extremespeed||85,85,85,85,85,85|M|||86|,,,,,Normal]Cinccino||LoadedDice|Technician|bulletseed,protect,tripleaxel,tailslap||85,85,85,85,85,85|F|||85|,,,,,Normal",
+   "species": [
+    "Drednaw",
+    "Lucario",
+    "Cinccino"
+   ]
+  },
+  {
+   "id": "v1-028",
+   "seed": "sodium,b7c2b3104346902ae5779cf661826e16",
+   "packed": "Mimikyu||LifeOrb|Disguise|swordsdance,shadowclaw,shadowsneak,playrough||85,85,85,85,85,85|F|||82|,,,,,Ghost]Cacturne||LifeOrb|WaterAbsorb|knockoff,leafstorm,suckerpunch,spikyshield||85,85,85,85,85,85|M|||91|,,,,,Dark]Hariyama||FlameOrb|Guts|knockoff,facade,closecombat,fakeout||85,85,85,85,85,85|M|||85|,,,,,Normal",
+   "species": [
+    "Mimikyu",
+    "Cacturne",
+    "Hariyama"
+   ]
+  },
+  {
+   "id": "v1-029",
+   "seed": "sodium,be34f51c6d8e7ad4119f04da433beba8",
+   "packed": "Jolteon||LifeOrb|VoltAbsorb|protect,thunderbolt,helpinghand,alluringvoice||85,,85,85,85,85|F|,0,,,,||85|,,,,,Fairy]Toedscruel||SitrusBerry|MyceliumMight|earthpower,ragepowder,spore,gigadrain||85,,85,85,85,85|F|,0,,,,||87|,,,,,Water]Copperajah||AssaultVest|HeavyMetal|heavyslam,heatcrash,stoneedge,highhorsepower||85,85,85,85,85,85|F|||86|,,,,,Fire",
+   "species": [
+    "Jolteon",
+    "Toedscruel",
+    "Copperajah"
+   ]
+  },
+  {
+   "id": "v1-030",
+   "seed": "sodium,ba3bf87475b0502068cd3e72f6df91fc",
+   "packed": "Raichu|RaichuAlola|ChoiceSpecs|SurgeSurfer|thunderbolt,grassknot,focusblast,psychic||85,,85,85,85,85|M|,0,,,,||89|,,,,,Electric]Houndoom||LifeOrb|FlashFire|suckerpunch,protect,darkpulse,heatwave||85,85,85,85,85,85|M|||86|,,,,,Grass]Rayquaza||LifeOrb|AirLock|protect,dracometeor,earthpower,dragonascent||85,85,85,85,85,85|N|||75|,,,,,Flying",
+   "species": [
+    "Raichu-Alola",
+    "Houndoom",
+    "Rayquaza"
+   ]
+  },
+  {
+   "id": "v1-031",
+   "seed": "sodium,ea8ca63d5785b3f8b448f09a4153e7a8",
+   "packed": "Whiscash||SitrusBerry|Oblivious|muddywater,protect,highhorsepower,icywind||85,85,85,85,85,85|M|||88|,,,,,Fire]Kommo-o||ThroatSpray|Soundproof|ironhead,clangoroussoul,clangingscales,drainpunch||85,85,85,85,85,85|M|||79|,,,,,Steel]Comfey||SitrusBerry|Triage|helpinghand,tailwind,floralhealing,drainingkiss||85,,85,85,85,85|M|,0,,,,||88|,,,,,Fairy",
+   "species": [
+    "Whiscash",
+    "Kommo-o",
+    "Comfey"
+   ]
+  }
+ ]
+}
