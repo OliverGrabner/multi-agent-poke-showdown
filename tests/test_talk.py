@@ -129,3 +129,33 @@ def test_observation_lists_every_legal_option(bridge):
     assert option_count(alex.inputs[0]) == len(views["p1"].legal)
     assert "Your team:" in alex.inputs[0] and "Sam's team:" in alex.inputs[0]
     env.close()
+
+
+def test_replay_shows_both_teams_chat_before_the_moves_it_led_to(bridge):
+    from pokerl.replay import log_with_chat
+
+    env = MultiBattleEnv(bridge)
+    spec = make_specs(load_pool(), 1, "talk-replay", mirror=False)[0]
+    teams = {}
+    for side, (first, second), names in (
+        ("p1p3", ("p1", "p3"), ("Alex", "Sam")),
+        ("p2p4", ("p2", "p4"), ("Jordan", "Casey")),
+    ):
+        a, b = ScriptedAgent(names[0], None), ScriptedAgent(names[1], None)
+        a.script, b.script = talk_once_then_choose(a), talk_once_then_choose(b)
+        teams[side] = TalkingTeam({first: a, second: b}, Dex(bridge))
+    record = play(env, spec, teams)
+    merged = log_with_chat(record)
+    chats = [line for line in merged if line.startswith("|c|")]
+    talk_events = [
+        e for side in record["sides"].values() for e in side["transcript"] if e["event"] in ("say", "choose")
+    ]
+    assert len(chats) == len(talk_events)
+    assert any(line.startswith("|c|☆Jordan|") for line in chats) and any("[chose " in line for line in chats)
+    # Turn 1's talk comes after the "turn 1" marker and before any move of turn 1.
+    first_chat = merged.index(chats[0])
+    assert (
+        merged.index("|turn|1")
+        < first_chat
+        < next(i for i, line in enumerate(merged) if line.startswith("|move|"))
+    )

@@ -29,13 +29,48 @@ document.write('<script src="https://play.pokemonshowdown.com/js/replay-embed.js
 """
 
 
+def chat_lines(record: dict) -> dict[int, list[str]]:
+    """Each team's private talk and choices as Showdown chat lines, keyed by where they go in the log.
+
+    The talk for a decision happened just before the log reached that decision's `log_index`,
+    so the replay viewer shows it right before the moves it led to.
+    """
+    log_index = {step: entry["log_index"] for step, entry in enumerate(record["steps"])}
+    lines: dict[int, list[str]] = {}
+    for side in record["sides"].values():
+        if side["kind"] != "talking":
+            continue
+        for event in side["transcript"]:
+            name = side["agents"][event["seat"]]
+            if event["event"] == "say":
+                text = event["text"]
+            elif event["event"] == "choose":
+                text = f"[chose {event['label']}]"
+            else:
+                continue
+            # A chat line is one protocol line: no newlines, and "|" would end the message early.
+            text = " ".join(text.split()).replace("|", "/")
+            lines.setdefault(log_index[event["step"]], []).append(f"|c|☆{name}|{text}")
+    return lines
+
+
+def log_with_chat(record: dict) -> list[str]:
+    chats = chat_lines(record)
+    merged = []
+    for index, line in enumerate(record["omniscient_log"]):
+        merged.extend(chats.get(index, []))
+        merged.append(line)
+    merged.extend(chats.get(len(record["omniscient_log"]), []))
+    return merged
+
+
 def replay_html(record: dict, format_name: str = "[Gen 9] Multi Random Battle") -> str:
     players = record["players"]
     subtitle = html.escape(
         f"{players['p1']} + {players['p3']} vs. {players['p2']} + {players['p4']}"
         f" | winner: {record['winning_side']} | {record['turns']} turns"
     )
-    log = "\n".join(record["omniscient_log"]).replace("</", "<\\/")
+    log = "\n".join(log_with_chat(record)).replace("</", "<\\/")
     return TEMPLATE.format(
         title=html.escape(record["battle_key"]),
         replay_id=html.escape(record["battle_key"]),

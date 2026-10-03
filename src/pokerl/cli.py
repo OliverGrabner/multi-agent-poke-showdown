@@ -150,7 +150,7 @@ def cmd_model_check(args: argparse.Namespace) -> None:
 
 
 def cmd_llm(args: argparse.Namespace) -> None:
-    """An LLM team (p1 + p3) against scripted bots."""
+    """Battles where each side is an LLM team (a model name) or scripted bots (a policy name)."""
     load_env()
     out_dir = Path(args.out_dir) / args.label
     battles = out_dir / "battles.jsonl"
@@ -158,12 +158,13 @@ def cmd_llm(args: argparse.Namespace) -> None:
         raise SystemExit(f"{battles} exists; pick a new --label")
     specs = make_specs(load_pool(args.pool), args.battles, args.label, mirror=False)
     start = time.perf_counter()
-    records = run_llm_batch(specs, args.model, args.opponent, battles)
+    records = run_llm_batch(specs, args.side_a, args.side_b, battles)
     summary = {
-        "model": args.model,
-        "opponent": args.opponent,
+        "side_a (p1+p3)": args.side_a,
+        "side_b (p2+p4)": args.side_b,
         **summarize(records),
-        **summarize_talk(records),
+        "talk_side_a": summarize_talk(records, "p1p3"),
+        "talk_side_b": summarize_talk(records, "p2p4"),
         "seconds": round(time.perf_counter() - start, 1),
     }
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=1) + "\n", encoding="utf-8")
@@ -210,11 +211,11 @@ def main(argv: list[str] | None = None) -> None:
     model_check.add_argument("--model", required=True, choices=sorted(MODELS))
     model_check.set_defaults(func=cmd_model_check)
 
-    llm = sub.add_parser("llm", help="an LLM team (p1 + p3) against scripted bots")
-    llm.add_argument("--model", required=True, choices=sorted(MODELS))
+    llm = sub.add_parser("llm", help="battles with LLM teams and/or bots")
+    llm.add_argument("--side-a", required=True, help="p1 + p3: a model name or a bot policy")
+    llm.add_argument("--side-b", default="random", help="p2 + p4: a model name or a bot policy")
     llm.add_argument("--label", required=True, help="names the output folder and seeds the battles")
     llm.add_argument("--battles", type=int, default=1)
-    llm.add_argument("--opponent", default="random", help="bot policy for p2 and p4")
     llm.add_argument("--pool", default=str(DEFAULT_POOL))
     llm.add_argument("--out-dir", default="runs")
     llm.set_defaults(func=cmd_llm)

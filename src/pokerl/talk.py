@@ -139,10 +139,11 @@ class TalkingTeam:
             elif isinstance(reply, Choose):
                 action = env.views[seat].legal[reply.option - 1]
                 chosen[seat] = action["choice"]
-                self.log(env, step, seat, "choose", option=reply.option, choice=action["choice"])
+                label = self.observers[seat].option_label(action)
+                self.log(env, step, seat, "choose", option=reply.option, choice=action["choice"], label=label)
                 if partner and partner not in chosen:
-                    label = self.observers[partner].option_label(action)
-                    add(inbox, partner, f"{self.agents[seat].name} chose: {label}")
+                    as_partner_sees_it = self.observers[partner].option_label(action)
+                    add(inbox, partner, f"{self.agents[seat].name} chose: {as_partner_sees_it}")
 
         for seat in talkers:
             self.agents[seat].finish(inbox.pop(seat, ""))

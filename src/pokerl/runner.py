@@ -62,6 +62,8 @@ def play(
         if not pending:
             raise RuntimeError(f"No seat can act at turn {env.turn}, but the battle has not ended")
         turn = env.turn
+        # Where this decision sits in the battle log, so replays can show the team chat at that point.
+        log_index = len(env.omniscient_log)
         actions = {}
         for side, controller in sides.items():
             seats = [seat for seat in pending if SIDE_OF[seat] == side]
@@ -69,7 +71,9 @@ def play(
                 actions.update(controller.decide(env, seats, step, rejected))
         result = env.step(actions)
         rejected = result.errors
-        steps.append({"turn": turn, "choices": actions, "rejected": sorted(result.errors)})
+        steps.append(
+            {"turn": turn, "log_index": log_index, "choices": actions, "rejected": sorted(result.errors)}
+        )
         for seat, message in result.errors.items():
             rejections.append({"turn": turn, "seat": seat, "choice": actions[seat], "error": message})
         if len(rejections) > MAX_REJECTIONS:
