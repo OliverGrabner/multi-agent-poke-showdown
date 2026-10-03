@@ -54,21 +54,28 @@ class Observer:
         self.explained: set[str] = set()
         self.to_explain: dict[str, str] = {}
 
-    def observe(self, view: SeatView, header: str) -> tuple[str, list[str]]:
+    def observe(
+        self, view: SeatView, header: str, options_title: str = "Your options"
+    ) -> tuple[str, list[str]]:
         """Returns the message text and the Showdown choices behind options 1, 2, 3, ..."""
-        new_lines = view.log[self.cursor :]
-        self.cursor = len(view.log)
-        self.tracker.update(new_lines)
+        new_lines = self.catch_up(view)
         self.to_explain = {}
         sections = [
             header,
             self.events_section(new_lines),
             self.field_section(view),
             self.teams_section(view),
-            self.options_section(view),
+            self.options_section(view, options_title),
             self.explanations_section(),
         ]
         return "\n\n".join(section for section in sections if section), view.choices
+
+    def catch_up(self, view: SeatView) -> list[str]:
+        """Read the log lines this observer has not seen yet into the tracker, and return them."""
+        new_lines = view.log[self.cursor :]
+        self.cursor = len(view.log)
+        self.tracker.update(new_lines)
+        return new_lines
 
     # Sections
 
@@ -111,11 +118,11 @@ class Observer:
         parts.append("Opponents' Pokémon not on the field:\n" + "\n".join(opponents))
         return "\n\n".join(parts)
 
-    def options_section(self, view: SeatView) -> str:
+    def options_section(self, view: SeatView, title: str = "Your options") -> str:
         if not view.legal:
             return ""
         lines = [f"{number}. {self.option_text(action)}" for number, action in enumerate(view.legal, 1)]
-        return "Your options:\n" + "\n".join(lines)
+        return f"{title}:\n" + "\n".join(lines)
 
     def explanations_section(self) -> str:
         if not self.to_explain:

@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 
 from pokerl.models import ChatClient
-from pokerl.prompts import system_prompt
 from pokerl.talk import Choose, InvalidReply, Reply, Say
 
 TOOLS = [
@@ -44,6 +43,9 @@ TOOLS = [
 ]
 
 
+CHOOSE_ONLY = [tool for tool in TOOLS if tool["function"]["name"] == "choose"]
+
+
 def parse_call(call: dict) -> Reply:
     """One tool call from the model -> Say or Choose."""
     name = call["function"]["name"]
@@ -67,17 +69,19 @@ def parse_call(call: dict) -> Reply:
 
 
 class LLMAgent:
-    def __init__(self, name: str, partner_name: str, client: ChatClient, keep_talking: bool = True):
+    """A model-backed player. The prompt and tools depend on the condition (see prompts.py)."""
+
+    def __init__(self, name: str, client: ChatClient, prompt: str, tools: list[dict] = TOOLS):
         self.name = name
         self.client = client
-        prompt = system_prompt(name, partner_name, keep_talking=keep_talking)
+        self.tools = tools
         self.messages: list[dict] = [{"role": "system", "content": prompt}]
         self.waiting_calls: list[str] = []  # ids of tool calls whose result has not been sent yet
         self.calls: list[dict] = []  # one entry per model call, for the battle log
 
     def respond(self, text: str) -> Reply:
         self.deliver(text)
-        completion = self.client.complete(self.messages, TOOLS)
+        completion = self.client.complete(self.messages, self.tools)
         message = completion.message
         self.messages.append(message)
         tool_calls = message.get("tool_calls", [])
