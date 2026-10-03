@@ -1,120 +1,144 @@
-"""Battles where either side is an LLM team or a pair of scripted bots, and a summary of the talk."""
+"""Battles where either side is model-backed (in any condition) or a pair of scripted bots.
+
+Battles run in parallel threads, each with its own simulator, sharing one client per model.
+Every finished battle is appended to the output file at once, and battles already in the file are
+skipped, so an interrupted run (say, a Slurm job hitting its time limit) resumes where it stopped.
+"""
 
 from __future__ import annotations
 
 import json
+import threading
 import traceback
-from collections import Counter
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from pokerl import PLAYER, SIDES
+from pokerl import PLAYER, SIDES, TEAM_COLOR
 from pokerl.bots import POLICIES, BotSide, make_policy
 from pokerl.bridge import Bridge
 from pokerl.dex import Dex
 from pokerl.env import MultiBattleEnv
-from pokerl.llm_agent import LLMAgent
-from pokerl.models import MODELS, BudgetExceeded, ChatClient, output_tokens
+from pokerl.llm_agent import CHOOSE_ONLY, TOOLS, LLMAgent
+from pokerl.models import MODELS, BudgetExceeded, ChatClient
+from pokerl.prompts import MODES, solo_prompt, system_prompt
 from pokerl.runner import play
-from pokerl.talk import MAX_MESSAGES, TalkingTeam
+from pokerl.talk import SoloTeam, TalkingTeam
 from pokerl.teams import BattleSpec
 
+SIDE_MODES = (*MODES, "solo")  # "solo": one model controls both Pokémon
 
-def check_player(player: str) -> None:
+
+def models_in(player: str) -> list[str]:
+    """'qwen' -> ['qwen']; 'a+b' -> ['a', 'b']; a bot policy -> []."""
+    return [] if player in POLICIES else player.split("+")
+
+
+def check_side(player: str, mode: str) -> None:
     """A bot policy, a model name, or two model names joined by '+' (one per teammate)."""
-    if player in POLICIES:
-        return
-    for model in player.split("+"):
+    if mode not in SIDE_MODES:
+        raise ValueError(f"Unknown mode {mode!r}; choose from {SIDE_MODES}")
+    for model in models_in(player):
         if model not in MODELS:
             raise ValueError(
                 f"{model!r} is neither a model ({sorted(MODELS)}) nor a bot ({sorted(POLICIES)})"
             )
+    if mode == "solo" and len(models_in(player)) > 1:
+        raise ValueError("A solo side is one model controlling both Pokémon; give one model name")
 
 
-def make_side(side: str, player: str, clients: dict[str, ChatClient], dex: Dex, keep_talking: bool = True):
-    """A BotSide for a bot policy, else a TalkingTeam. 'a+b' gives the first seat model a, the second b."""
+def make_side(
+    side: str, player: str, mode: str, clients: dict[str, ChatClient], dex: Dex, keep_talking: bool = True
+):
+    """The controller for one side. 'a+b' gives the first seat model a and the second model b."""
     first, second = SIDES[side]
     if player in POLICIES:
         return BotSide({first: make_policy(player), second: make_policy(player)})
-    models = player.split("+")
-    if len(models) == 1:
-        models = models * 2
-    seat_models = {first: models[0], second: models[1]}
-    for model in models:
-        if model not in clients:
-            clients[model] = ChatClient(model)
+    models = models_in(player)
+    if mode == "solo":
+        agent = LLMAgent(
+            TEAM_COLOR[side], clients[models[0]], solo_prompt(PLAYER[first], PLAYER[second]), CHOOSE_ONLY
+        )
+        return SoloTeam(agent, (first, second), dex, label=models[0])
+    seat_models = {first: models[0], second: models[-1]}
+    tools = CHOOSE_ONLY if mode == "no-talk" else TOOLS
     agents = {
-        first: LLMAgent(PLAYER[first], PLAYER[second], clients[seat_models[first]], keep_talking),
-        second: LLMAgent(PLAYER[second], PLAYER[first], clients[seat_models[second]], keep_talking),
+        seat: LLMAgent(
+            PLAYER[seat],
+            clients[model],
+            system_prompt(PLAYER[seat], PLAYER[other], mode, keep_talking=keep_talking),
+            tools,
+        )
+        for (seat, model), other in zip(seat_models.items(), (second, first), strict=True)
     }
-    return TalkingTeam(agents, dex, labels=seat_models, keep_talking=keep_talking)
+    return TalkingTeam(agents, dex, labels=seat_models, mode=mode, keep_talking=keep_talking)
+
+
+def read_records(path: Path) -> list[dict]:
+    """The latest record per battle in a battles.jsonl file; a finished battle beats a crash."""
+    if not path.exists():
+        return []
+    latest: dict[str, dict] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        record = json.loads(line)
+        if "crash" not in record or "crash" in latest.get(record["battle_key"], {"crash": True}):
+            latest[record["battle_key"]] = record
+    return list(latest.values())
 
 
 def run_llm_batch(
-    specs: list[BattleSpec], side_a: str, side_b: str, out_path: Path, keep_talking: bool = True
+    specs: list[BattleSpec],
+    side_a: str,
+    side_b: str,
+    out_path: Path,
+    mode_a: str = "free",
+    mode_b: str = "free",
+    keep_talking: bool = True,
+    workers: int = 1,
 ) -> list[dict]:
-    """Play every spec in order, appending one JSON line per battle. Stops at once if a budget runs out."""
-    check_player(side_a)
-    check_player(side_b)
+    """Play every spec not already finished in `out_path`; return all records in the file."""
+    check_side(side_a, mode_a)
+    check_side(side_b, mode_b)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    clients: dict[str, ChatClient] = {}
-    records = []
-    with Bridge() as bridge, out_path.open("a", encoding="utf-8") as out:
-        env = MultiBattleEnv(bridge)
-        dex = Dex(bridge)
-        for spec in specs:
-            sides = {
-                "p1p3": make_side("p1p3", side_a, clients, dex, keep_talking),
-                "p2p4": make_side("p2p4", side_b, clients, dex, keep_talking),
+    finished = {r["battle_key"] for r in read_records(out_path) if "crash" not in r}
+    todo = [spec for spec in specs if spec.battle_key not in finished]
+    clients = {model: ChatClient(model) for model in {*models_in(side_a), *models_in(side_b)}}
+
+    local = threading.local()  # one simulator per thread
+    bridges: list[Bridge] = []
+    write_lock = threading.Lock()
+
+    def play_one(spec: BattleSpec) -> None:
+        if not hasattr(local, "env"):
+            local.bridge = Bridge()
+            bridges.append(local.bridge)
+            local.env, local.dex = MultiBattleEnv(local.bridge), Dex(local.bridge)
+        sides = {
+            "p1p3": make_side("p1p3", side_a, mode_a, clients, local.dex, keep_talking),
+            "p2p4": make_side("p2p4", side_b, mode_b, clients, local.dex, keep_talking),
+        }
+        try:
+            record = play(local.env, spec, sides)
+        except BudgetExceeded:
+            raise
+        except Exception:
+            local.env.close()
+            record = {
+                "battle_key": spec.battle_key,
+                "crash": traceback.format_exc(),
+                "sides": {side: controller.record() for side, controller in sides.items()},
             }
-            try:
-                record = play(env, spec, sides)
-            except BudgetExceeded:
-                raise
-            except Exception:
-                record = {
-                    "battle_key": spec.battle_key,
-                    "crash": traceback.format_exc(),
-                    "sides": {side: controller.record() for side, controller in sides.items()},
-                }
+        with write_lock, out_path.open("a", encoding="utf-8") as out:
             out.write(json.dumps(record) + "\n")
-            out.flush()
-            records.append(record)
-    return records
 
-
-def summarize_talk(records: list[dict], side: str) -> dict:
-    """Model calls, cost, output validity and how much one side's teammates talked."""
-    counts = Counter()
-    says_per_round = []
-    for record in records:
-        if "crash" in record or record["sides"][side]["kind"] != "talking":
-            continue
-        team = record["sides"][side]
-        events = team["transcript"]
-        counts.update(event["event"] for event in events)
-        rounds = {event["step"] for event in events if event["event"] == "observation"}
-        says = Counter(event["step"] for event in events if event["event"] == "say")
-        says_per_round.extend(says.get(step, 0) for step in rounds)
-        for log in team["agent_logs"].values():
-            for call in log["calls"]:
-                counts["calls"] += 1
-                counts["prompt_tokens"] += call["usage"].get("prompt_tokens", 0)
-                counts["output_tokens"] += output_tokens(call["usage"])
-                counts["cost_microdollars"] += round(call["cost"] * 1e6)
-    calls = counts["calls"]
-    if not calls:
-        return {}
-    return {
-        "model_calls": calls,
-        "cost_usd": round(counts["cost_microdollars"] / 1e6, 4),
-        "prompt_tokens": counts["prompt_tokens"],
-        "output_tokens_with_thinking": counts["output_tokens"],
-        "valid_reply_rate": round(1 - counts["invalid"] / calls, 4),
-        "invalid_replies": counts["invalid"],
-        "fallback_choices": counts["fallback"],
-        "rounds": len(says_per_round),
-        "mean_messages_per_round": round(sum(says_per_round) / len(says_per_round), 2)
-        if says_per_round
-        else None,
-        "rounds_hitting_message_ceiling": sum(n >= MAX_MESSAGES for n in says_per_round),
-    }
+    try:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = [pool.submit(play_one, spec) for spec in todo]
+            for future in as_completed(futures):
+                if isinstance(future.exception(), BudgetExceeded):
+                    pool.shutdown(cancel_futures=True)
+                    raise future.exception()
+                future.result()
+    finally:
+        for bridge in bridges:
+            bridge.close()
+    return read_records(out_path)
