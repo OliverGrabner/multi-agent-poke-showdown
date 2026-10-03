@@ -45,21 +45,20 @@ function effectiveness(battle, moveType, target) {
   return 2 ** battle.dex.getEffectiveness(moveType, target);
 }
 
-function describeMove(battle, pokemon, requestMove, index, targetLoc, tera) {
+function describeMove(battle, pokemon, requestMove, index, targetLoc) {
   const move = battle.dex.moves.get(requestMove.id);
   const action = {
-    choice: `move ${index}${targetLoc ? ` ${targetLoc}` : ''}${tera ? ' terastallize' : ''}`,
+    choice: `move ${index}${targetLoc ? ` ${targetLoc}` : ''}`,
     kind: 'move',
     move: requestMove.move,
     move_id: move.id,
-    type: tera && move.id === 'terablast' ? pokemon.teraType : move.type,
+    type: move.type,
     category: move.category,
     base_power: move.basePower,
     accuracy: move.accuracy === true ? null : move.accuracy,
     priority: move.priority,
     target_type: requestMove.target || move.target,
-    terastallize: tera,
-    stab: pokemon.getTypes().includes(move.type) || (tera && pokemon.teraType === move.type),
+    stab: pokemon.getTypes().includes(move.type),
     target: null,
     hits: [],
   };
@@ -112,7 +111,6 @@ function legalActions(battle, side) {
   const pokemon = side.active[0];
   if (!active || !pokemon) return [{ choice: 'pass', kind: 'pass' }];
   const actions = [];
-  const teraOptions = active.canTerastallize ? [false, true] : [false];
   // A locked move (Outrage, a charging Fly, recharge) keeps its earlier target, so offer it once.
   const locked = pokemon.getLockedMove() || pokemon.getSemiLockedMove();
   active.moves.forEach((requestMove, i) => {
@@ -126,9 +124,7 @@ function legalActions(battle, side) {
     } else {
       locs.push(0);
     }
-    for (const tera of teraOptions) {
-      for (const loc of locs) actions.push(describeMove(battle, pokemon, requestMove, i + 1, loc, tera));
-    }
+    for (const loc of locs) actions.push(describeMove(battle, pokemon, requestMove, i + 1, loc));
   });
   if (!active.trapped) actions.push(...switchActions(request, false));
   return actions;
@@ -238,11 +234,25 @@ const handlers = {
     return { closed: true };
   },
 
-  dex_move(args) {
-    const move = Dex.forFormat(args.format).moves.get(args.move);
-    return move.exists ? { name: move.name, type: move.type, category: move.category,
-      base_power: move.basePower, accuracy: move.accuracy, priority: move.priority,
-      target: move.target, desc: move.desc || move.shortDesc } : null;
+  // Look up one move, ability, item or species by id in Showdown's data.
+  describe(args) {
+    const dex = Dex.forFormat(args.format);
+    if (args.kind === 'move') {
+      const move = dex.moves.get(args.id);
+      return move.exists ? {
+        name: move.name, type: move.type, category: move.category, base_power: move.basePower,
+        accuracy: move.accuracy === true ? null : move.accuracy, priority: move.priority,
+        desc: move.shortDesc || move.desc,
+      } : null;
+    }
+    if (args.kind === 'species') {
+      const species = dex.species.get(args.id);
+      return species.exists ? { name: species.name, types: species.types } : null;
+    }
+    const table = { ability: dex.abilities, item: dex.items }[args.kind];
+    if (!table) throw new Error(`Unknown kind ${args.kind}`);
+    const entry = table.get(args.id);
+    return entry.exists ? { name: entry.name, desc: entry.shortDesc || entry.desc } : null;
   },
 };
 

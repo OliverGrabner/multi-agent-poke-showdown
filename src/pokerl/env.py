@@ -67,6 +67,7 @@ class MultiBattleEnv:
         self.battle_id: str | None = None
         self.seed: str | None = None
         self.turn = 0
+        self.request_state = ""  # "move", "switch" (mid-turn replacement) or "" between turns
         self.ended = False
         self.winning_side: str | None = None
         self.omniscient_log: list[str] = []
@@ -139,6 +140,7 @@ class MultiBattleEnv:
 
     def _absorb(self, snapshot: dict[str, Any]) -> None:
         self.turn = snapshot["turn"]
+        self.request_state = snapshot["request_state"]
         self.ended = snapshot["ended"]
         self.winning_side = snapshot["winning_side"]
         self.omniscient_log.extend(snapshot["omniscient_log"])

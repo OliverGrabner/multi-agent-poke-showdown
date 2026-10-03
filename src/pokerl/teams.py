@@ -7,14 +7,14 @@ import random
 from dataclasses import dataclass
 from pathlib import Path
 
-from pokerl import FORMAT
+from pokerl import TEAM_FORMAT
 from pokerl.bridge import Bridge
 from pokerl.env import make_seed
 
 DEFAULT_POOL = Path(__file__).resolve().parents[2] / "data" / "teams" / "pool-v1.json"
 
 
-def generate_pool(bridge: Bridge, size: int, label: str, format: str = FORMAT) -> dict:
+def generate_pool(bridge: Bridge, size: int, label: str, format: str = TEAM_FORMAT) -> dict:
     """Generate `size` random-battle teams from seeds derived from `label`."""
     seeds = [make_seed("team", label, i) for i in range(size)]
     generated = bridge.call("teams", format=format, seeds=seeds)
