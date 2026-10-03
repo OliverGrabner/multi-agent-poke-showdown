@@ -16,7 +16,7 @@ class Policy(Protocol):
 
 
 class RandomBot:
-    """Uniform over every legal action, including Terastallizing and targeting its ally."""
+    """Uniform over every legal action, including targeting its ally."""
 
     name = "random"
 
@@ -46,26 +46,23 @@ def move_score(action: dict) -> float | None:
 class MaxPowerBot:
     """Picks the attack with the highest power x accuracy x STAB x type effectiveness against a foe.
 
-    Never Terastallizes or switches voluntarily; on a forced switch it picks a random replacement.
+    Never switches voluntarily; on a forced switch it picks a random replacement.
     """
 
     name = "maxpower"
 
     def act(self, view: SeatView, rng: random.Random) -> str:
         scored = [
-            (score, action["choice"])
-            for action in view.legal
-            if not action.get("terastallize") and (score := move_score(action)) is not None
+            (score, action["choice"]) for action in view.legal if (score := move_score(action)) is not None
         ]
         best = max((score for score, _ in scored), default=0)
         if best > 0:
             return rng.choice([choice for score, choice in scored if score == best])
-        # No useful attack: any non-Tera move that does not target the ally, else whatever is legal.
+        # No useful attack: any move that does not target the ally, else whatever is legal.
         fallback = [
             action["choice"]
             for action in view.legal
             if action["kind"] == "move"
-            and not action.get("terastallize")
             and not (action["target"] and action["target"]["seat"] not in FOES[view.seat])
         ]
         return rng.choice(fallback or view.choices)
@@ -79,3 +76,26 @@ def make_policy(name: str) -> Policy:
         return POLICIES[name]()
     except KeyError:
         raise ValueError(f"Unknown policy {name!r}; choose from {sorted(POLICIES)}") from None
+
+
+def step_rng(seed: str, seat: str, step: int) -> random.Random:
+    """Bot randomness depends only on (battle seed, seat, step), so saved battles resume identically."""
+    return random.Random(f"{seed}:{seat}:{step}")
+
+
+class BotSide:
+    """A side whose two seats are each played by a scripted policy, with no talking."""
+
+    def __init__(self, policies: dict[str, Policy]):
+        self.policies = policies
+
+    def names(self) -> dict[str, str]:
+        return {seat: f"{seat}-{policy.name}" for seat, policy in self.policies.items()}
+
+    def decide(self, env, seats: list[str], step: int, rejected: dict[str, str]) -> dict[str, str]:
+        return {
+            seat: self.policies[seat].act(env.views[seat], step_rng(env.seed, seat, step)) for seat in seats
+        }
+
+    def record(self) -> dict:
+        return {"kind": "bots", "policies": {seat: policy.name for seat, policy in self.policies.items()}}

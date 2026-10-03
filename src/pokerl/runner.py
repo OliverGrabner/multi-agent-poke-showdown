@@ -1,19 +1,19 @@
-"""Play battles between seat policies, log every battle as one JSON line, and summarize results."""
+"""Play battles between two side controllers, log every battle as one JSON line, summarize results."""
 
 from __future__ import annotations
 
 import json
 import math
-import random
 import time
 import traceback
 from collections.abc import Iterable
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict
 from pathlib import Path
+from typing import Protocol
 
-from pokerl import SEATS
-from pokerl.bots import Policy, make_policy
+from pokerl import SIDE_OF
+from pokerl.bots import BotSide, make_policy
 from pokerl.bridge import Bridge
 from pokerl.env import MultiBattleEnv
 from pokerl.teams import BattleSpec
@@ -22,19 +22,37 @@ MAX_TURNS = 300
 MAX_REJECTIONS = 20
 
 
-def step_rng(seed: str, seat: str, step: int) -> random.Random:
-    """Bot randomness depends only on (battle seed, seat, step), so saved battles resume identically."""
-    return random.Random(f"{seed}:{seat}:{step}")
+class Controller(Protocol):
+    """Decides the actions for the seats of one side (scripted bots, or talking agents)."""
+
+    def names(self) -> dict[str, str]: ...
+
+    def decide(
+        self, env: MultiBattleEnv, seats: list[str], step: int, rejected: dict[str, str]
+    ) -> dict[str, str]: ...
+
+    def record(self) -> dict: ...
+
+
+def bot_sides(seat_policies: dict[str, str]) -> dict[str, BotSide]:
+    """{'p1': 'maxpower', ...} -> one BotSide per side."""
+    return {
+        side: BotSide(
+            {seat: make_policy(seat_policies[seat]) for seat in seat_policies if SIDE_OF[seat] == side}
+        )
+        for side in ("p1p3", "p2p4")
+    }
 
 
 def play(
-    env: MultiBattleEnv, spec: BattleSpec, policies: dict[str, Policy], max_turns: int = MAX_TURNS
+    env: MultiBattleEnv, spec: BattleSpec, sides: dict[str, Controller], max_turns: int = MAX_TURNS
 ) -> dict:
     """Play one battle to the end and return its log record."""
     start = time.perf_counter()
-    names = {seat: f"{seat}-{policies[seat].name}" for seat in SEATS}
+    names = {seat: name for controller in sides.values() for seat, name in controller.names().items()}
     env.reset(spec.seed, spec.teams, names)
     steps, rejections, step = [], [], 0
+    rejected: dict[str, str] = {}
     truncated = False
     while not env.ended:
         if env.turn > max_turns:
@@ -44,10 +62,13 @@ def play(
         if not pending:
             raise RuntimeError(f"No seat can act at turn {env.turn}, but the battle has not ended")
         turn = env.turn
-        actions = {
-            seat: policies[seat].act(env.views[seat], step_rng(spec.seed, seat, step)) for seat in pending
-        }
+        actions = {}
+        for side, controller in sides.items():
+            seats = [seat for seat in pending if SIDE_OF[seat] == side]
+            if seats:
+                actions.update(controller.decide(env, seats, step, rejected))
         result = env.step(actions)
+        rejected = result.errors
         steps.append({"turn": turn, "choices": actions, "rejected": sorted(result.errors)})
         for seat, message in result.errors.items():
             rejections.append({"turn": turn, "seat": seat, "choice": actions[seat], "error": message})
@@ -57,7 +78,8 @@ def play(
     record = {
         "battle_key": spec.battle_key,
         **{key: value for key, value in asdict(spec).items() if key not in ("battle_key", "teams")},
-        "policies": {seat: policies[seat].name for seat in SEATS},
+        "players": names,
+        "sides": {side: controller.record() for side, controller in sides.items()},
         "winning_side": env.winning_side,
         "truncated": truncated,
         "turns": env.turn,
@@ -82,13 +104,13 @@ def _init_worker() -> None:
 def _play_spec(spec: BattleSpec, seat_policies: dict[str, str], max_turns: int) -> dict:
     env = MultiBattleEnv(_worker_bridge)
     try:
-        return play(env, spec, {seat: make_policy(name) for seat, name in seat_policies.items()}, max_turns)
+        return play(env, spec, bot_sides(seat_policies), max_turns)
     except Exception:
         return {
             "battle_key": spec.battle_key,
             "seed": spec.seed,
             "team_ids": spec.team_ids,
-            "policies": seat_policies,
+            "players": seat_policies,
             "crash": traceback.format_exc(),
         }
 

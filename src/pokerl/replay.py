@@ -30,9 +30,9 @@ document.write('<script src="https://play.pokemonshowdown.com/js/replay-embed.js
 
 
 def replay_html(record: dict, format_name: str = "[Gen 9] Multi Random Battle") -> str:
-    policies = record["policies"]
+    players = record["players"]
     subtitle = html.escape(
-        f"{policies['p1']} + {policies['p3']} vs. {policies['p2']} + {policies['p4']}"
+        f"{players['p1']} + {players['p3']} vs. {players['p2']} + {players['p4']}"
         f" | winner: {record['winning_side']} | {record['turns']} turns"
     )
     log = "\n".join(record["omniscient_log"]).replace("</", "<\\/")

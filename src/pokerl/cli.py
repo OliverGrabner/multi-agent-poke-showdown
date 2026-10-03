@@ -9,11 +9,11 @@ import time
 from pathlib import Path
 
 from pokerl import SEATS
-from pokerl.bots import make_policy
+from pokerl.bots import RandomBot, step_rng
 from pokerl.bridge import Bridge
 from pokerl.env import MultiBattleEnv
 from pokerl.replay import write_replay
-from pokerl.runner import play, run_batch, step_rng, summarize
+from pokerl.runner import bot_sides, play, run_batch, summarize
 from pokerl.teams import DEFAULT_POOL, generate_pool, load_pool, make_specs
 
 
@@ -69,33 +69,33 @@ def cmd_replay(args: argparse.Namespace) -> None:
 def reproducibility_check(bridge: Bridge, pool: dict, battles: int) -> dict:
     """Same seed and choices give the same battle, and a mid-battle save resumes identically twice."""
     specs = make_specs(pool, battles, "repro", mirror=False)
-    policies = {seat: make_policy("random") for seat in SEATS}
+    bot = RandomBot()
     env = MultiBattleEnv(bridge)
     same_replay = sum(
-        play(env, spec, policies)["omniscient_log"] == play(env, spec, policies)["omniscient_log"]
+        play(env, spec, bot_sides(dict.fromkeys(SEATS, "random")))["omniscient_log"]
+        == play(env, spec, bot_sides(dict.fromkeys(SEATS, "random")))["omniscient_log"]
         for spec in specs
     )
 
-    def finish(env: MultiBattleEnv, spec, step: int) -> list[str]:
-        while not env.ended:
-            env.step({s: policies[s].act(env.views[s], step_rng(spec.seed, s, step)) for s in env.pending})
+    def advance(step: int, until_turn: int | None = None) -> int:
+        while not env.ended and (until_turn is None or env.turn < until_turn):
+            env.step({s: bot.act(env.views[s], step_rng(env.seed, s, step)) for s in env.pending})
             step += 1
-        return env.omniscient_log
+        return step
 
     same_resume = 0
     for i, spec in enumerate(specs):
         env.reset(spec.seed, spec.teams)
-        step = 0
-        while not env.ended and env.turn < 2 + i % 10:
-            env.step({s: policies[s].act(env.views[s], step_rng(spec.seed, s, step)) for s in env.pending})
-            step += 1
+        step = advance(0, until_turn=2 + i % 10)
         saved = env.save()
-        uninterrupted = finish(env, spec, step)
+        advance(step)
+        uninterrupted = list(env.omniscient_log)
         env.load(saved)
-        first = finish(env, spec, step)
+        advance(step)
+        first = list(env.omniscient_log)
         env.load(saved)
-        second = finish(env, spec, step)
-        same_resume += uninterrupted == first == second
+        advance(step)
+        same_resume += uninterrupted == first == env.omniscient_log
     env.close()
     return {"battles": battles, "identical_replays": same_replay, "identical_resumes": same_resume}
 
