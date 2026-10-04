@@ -1,0 +1,407 @@
+<meta charset="utf-8">
+<title>Qwen Teammates Results</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one column of findings, summary first; charts drawn with HTML rows on one 0-100% scale; battle explorer last. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --ink: #12151b;
+  --ink-2: #4b5260;
+  --ink-3: #7a8191;
+  --rule: #e2e5ea;
+  --track: #eceef2;
+  --talk: #2a78d6;      /* free talk / the team under test */
+  --talk-soft: #cde2fb;
+  --other: #eb6834;     /* the comparison condition */
+  --neutral: #c9ced6;
+  --neutral-2: #a3aab6;
+  --blue-team: #2563c9;
+  --red-team: #d03b3b;
+  --good: #0ca30c;
+  --display: "Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
+  --body: "Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121418; --surface: #1a1d23; --ink: #f2f4f7; --ink-2: #b9bfca; --ink-3: #8b92a0;
+    --rule: #2c313a; --track: #262a32; --talk: #3987e5; --talk-soft: #184f95; --other: #d95926;
+    --neutral: #3a404b; --neutral-2: #5a6271; --blue-team: #6ea2f0; --red-team: #ef7070; --good: #2fbf2f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121418; --surface: #1a1d23; --ink: #f2f4f7; --ink-2: #b9bfca; --ink-3: #8b92a0;
+  --rule: #2c313a; --track: #262a32; --talk: #3987e5; --talk-soft: #184f95; --other: #d95926;
+  --neutral: #3a404b; --neutral-2: #5a6271; --blue-team: #6ea2f0; --red-team: #ef7070; --good: #2fbf2f;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+.page { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 32px 64px; display: flex; flex-direction: column; gap: 28px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 20px; font-weight: 700; }
+h3 { font-size: 15px; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+.muted { color: var(--ink-2); }
+.small { font-size: 13px; color: var(--ink-3); }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+header { display: flex; flex-direction: column; gap: 10px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tile .big { font-family: var(--mono); font-size: 30px; font-weight: 600; letter-spacing: -0.02em; }
+.tile .big .vs { color: var(--ink-3); font-size: 20px; }
+section.card { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; }
+@media (max-width: 520px) { .grid2 { grid-template-columns: 1fr; } section.card { padding: 16px; } }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--ink-2); }
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+/* Dot-and-interval rows */
+.rows { display: grid; grid-template-columns: minmax(120px, 190px) 1fr 64px; gap: 10px 12px; align-items: center; }
+.rows .label { font-size: 14px; min-width: 0; }
+.rows .label b { font-family: var(--mono); color: var(--ink-3); font-weight: 600; margin-right: 6px; }
+.rows .val { text-align: right; font-family: var(--mono); font-size: 14px; }
+.track { position: relative; height: 26px; }
+.track .grid { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--rule); }
+.track .ref { position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 1.5px dashed var(--neutral-2); }
+.track .ci { position: absolute; top: 11px; height: 4px; border-radius: 2px; background: var(--talk-soft); }
+.track .dot { position: absolute; top: 5px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: var(--talk); border: 2px solid var(--surface); cursor: default; }
+.track .dot.dim { background: var(--neutral-2); }
+.axis { display: grid; grid-template-columns: minmax(120px, 190px) 1fr 64px; gap: 12px; }
+.axis .ticks { position: relative; height: 16px; font-size: 11px; color: var(--ink-3); font-family: var(--mono); }
+.axis .ticks span { position: absolute; transform: translateX(-50%); }
+
+/* Stacked outcome bars */
+.stack { display: flex; gap: 2px; height: 30px; border-radius: 4px; overflow: hidden; }
+.seg { display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 12px; font-weight: 600; min-width: 0; overflow: hidden; white-space: nowrap; }
+.seg.c { background: var(--talk); color: #fff; }
+.seg.x { background: var(--other); color: #fff; }
+.seg.n1 { background: var(--neutral); color: var(--ink); }
+.seg.n2 { background: var(--track); color: var(--ink-2); }
+.stackrow { display: grid; grid-template-columns: minmax(120px, 190px) 1fr; gap: 12px; align-items: center; }
+
+/* Bars */
+.bars { display: grid; grid-template-columns: minmax(110px, 170px) 1fr 54px; gap: 8px 10px; align-items: center; font-size: 13px; }
+.bar { height: 14px; background: var(--track); border-radius: 0 4px 4px 0; position: relative; }
+.bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0; background: var(--talk); }
+.bar i.dim { background: var(--neutral-2); }
+
+/* Scatter */
+.scatter svg { width: 100%; max-width: 680px; height: auto; display: block; overflow: visible; }
+.scatter text { fill: var(--ink-2); font-family: var(--mono); font-size: 11px; }
+.scatter .lbl { fill: var(--ink); font-family: var(--body); font-size: 13px; font-weight: 600; }
+
+/* Table */
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 600; color: var(--ink-2); font-size: 12px; }
+td { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+td:first-child { font-family: var(--body); }
+
+/* Explorer */
+.explorer { display: grid; grid-template-columns: 280px 1fr; gap: 16px; min-height: 520px; }
+@media (max-width: 760px) { .explorer { grid-template-columns: 1fr; } }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+select { font: inherit; font-size: 14px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); }
+.list { display: flex; flex-direction: column; gap: 4px; max-height: 560px; overflow-y: auto; padding-right: 4px; min-width: 0; }
+.item { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 7px 10px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.item:hover { background: var(--track); }
+.item:focus-visible { outline: 2px solid var(--talk); outline-offset: 1px; }
+.item[aria-current="true"] { background: var(--talk-soft); }
+.pill { font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 999px; }
+.pill.win { background: var(--good); color: #fff; }
+.pill.loss { background: var(--track); color: var(--ink-2); border: 1px solid var(--rule); }
+.detail { min-width: 0; display: flex; flex-direction: column; gap: 12px; max-height: 620px; overflow-y: auto; padding-right: 6px; }
+.turn { display: flex; flex-direction: column; gap: 8px; padding-block: 10px; border-top: 1px solid var(--rule); }
+.turn h4 { margin: 0; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.msg { display: flex; flex-direction: column; gap: 2px; }
+.msg .who { font-weight: 700; font-size: 13px; }
+.msg .text { white-space: pre-wrap; font-size: 14px; color: var(--ink); max-width: 72ch; }
+.blue { color: var(--blue-team); }
+.red { color: var(--red-team); }
+.choices { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12px; padding: 3px 9px; border-radius: 6px; background: var(--track); border: 1px solid var(--rule); }
+.chip b { margin-right: 4px; }
+#tip { position: fixed; z-index: 10; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12px; line-height: 1.4; padding: 7px 9px; border-radius: 6px; max-width: 260px; opacity: 0; transition: opacity .08s; }
+@media (prefers-reduced-motion: reduce) { #tip { transition: none; } }
+.err { color: var(--red-team); }
+</style>
+
+<div class="page" id="app">
+  <header>
+    <div class="eyebrow">Pokémon Showdown Multi Battles · Gen 9 random teams · Qwen3.8-27B, medium reasoning</div>
+    <h1>Does talking make LLM teammates win more?</h1>
+    <p class="muted">Two Qwen agents share a side and can talk privately before each turn. Every condition plays the same 25 team draws twice, with sides swapped, so differences come from how the team plays, not from luck of the draw.</p>
+  </header>
+  <div id="content"><p class="muted">Loading results…</p></div>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const $ = (sel, root = document) => root.querySelector(sel);
+const pct = (x, digits = 0) => (x * 100).toFixed(digits) + "%";
+const fmtK = (x) => x >= 1e6 ? (x / 1e6).toFixed(2) + "M" : x >= 1e3 ? (x / 1e3).toFixed(1) + "k" : String(x);
+function h(tag, attrs = {}, ...kids) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "style" && typeof v === "object") Object.assign(node.style, v);
+    else if (k === "class") node.className = v;
+    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid != null) node.append(kid.nodeType ? kid : document.createTextNode(kid));
+  return node;
+}
+
+// One tooltip for every mark with data-tip.
+const tip = $("#tip");
+document.addEventListener("pointermove", (e) => {
+  const mark = e.target.closest?.("[data-tip]");
+  if (!mark) { tip.style.opacity = 0; return; }
+  tip.textContent = mark.dataset.tip;
+  tip.style.whiteSpace = "pre-line";
+  const x = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
+  tip.style.left = x + "px";
+  tip.style.top = (e.clientY + 14) + "px";
+  tip.style.opacity = 1;
+});
+
+function ticks() {
+  return h("div", { class: "axis" }, h("div"), h("div", { class: "ticks" },
+    [0, 25, 50, 75, 100].map((t) => h("span", { style: { left: t + "%" } }, t + "%"))), h("div"));
+}
+
+function winRates(conditions) {
+  const order = ["A", "B", "C", "D"];
+  const rows = order.map((l) => conditions.find((c) => c.letter === l)).filter(Boolean);
+  return h("section", { class: "card" },
+    h("h2", {}, "Win rate against the max-power bot"),
+    h("p", { class: "muted" }, "Dot: share of battles won. Bar: 95% interval. Dashed line: 50%."),
+    ticks(),
+    h("div", { class: "rows" }, rows.flatMap((c) => [
+      h("div", { class: "label" }, h("b", {}, c.letter), c.label),
+      h("div", { class: "track" },
+        [25, 50, 75].map((t) => h("div", { class: t === 50 ? "ref" : "grid", style: { left: t + "%" } })),
+        h("div", { class: "ci", style: { left: pct(c.ci[0], 2), width: pct(c.ci[1] - c.ci[0], 2) } }),
+        h("div", { class: "dot" + (c.letter === "C" ? "" : " dim"), tabindex: 0,
+          "data-tip": `${c.label}\n${c.wins} of ${c.battles} won (${pct(c.rate)})\n95% interval ${pct(c.ci[0])}–${pct(c.ci[1])}`,
+          style: { left: pct(c.rate, 2) } })),
+      h("div", { class: "val" }, pct(c.rate)),
+    ])),
+    h("p", { class: "small" }, "Crashed battles (server timeouts) are left out: " +
+      rows.map((c) => `${c.letter} ${c.crashes}`).join(", ") + "."));
+}
+
+function stackBar(parts, total) {
+  return h("div", { class: "stack" }, parts.filter((p) => p.n > 0).map((p) =>
+    h("div", { class: "seg " + p.cls, style: { flex: `${p.n} 1 0` }, tabindex: 0,
+      "data-tip": `${p.tip}: ${p.n} of ${total}` }, p.n / total > 0.07 ? String(p.n) : "")));
+}
+
+function pairedChart(conditions) {
+  const rows = conditions.filter((c) => c.vs_free_talk);
+  return h("section", { class: "card" },
+    h("h2", {}, "Same teams, battle by battle"),
+    h("p", { class: "muted" }, "Each battle was played by free talk and by the other condition. The coloured ends are the battles only one of them won."),
+    h("div", { class: "legend" },
+      h("span", { class: "key" }, h("i", { class: "swatch", style: { background: "var(--talk)" } }), "Only free talk won"),
+      h("span", { class: "key" }, h("i", { class: "swatch", style: { background: "var(--neutral)" } }), "Both won"),
+      h("span", { class: "key" }, h("i", { class: "swatch", style: { background: "var(--track)", outline: "1px solid var(--rule)" } }), "Both lost"),
+      h("span", { class: "key" }, h("i", { class: "swatch", style: { background: "var(--other)" } }), "Only the other won")),
+    rows.map((c) => {
+      const p = c.vs_free_talk;
+      return h("div", { class: "stackrow" },
+        h("div", { class: "label" }, h("span", { class: "small" }, "Free talk vs "), h("br"), h("b", {}, c.label)),
+        stackBar([
+          { n: p.only_base, cls: "c", tip: "Only free talk won" },
+          { n: p.both, cls: "n1", tip: "Both won" },
+          { n: p.neither, cls: "n2", tip: "Both lost" },
+          { n: p.only_other, cls: "x", tip: `Only ${c.label.toLowerCase()} won` },
+        ], p.shared));
+    }));
+}
+
+function headToHead(h2h) {
+  return h2h.map((m) => h("section", { class: "card" },
+    h("h2", {}, `Head to head: ${m.labels[0]} vs ${m.labels[1]}`),
+    h("p", { class: "muted" }, `Both teams are Qwen. ${m.labels[0]} won ${m.wins} of ${m.battles} battles (${pct(m.rate)}, 95% interval ${pct(m.ci[0])}–${pct(m.ci[1])}).`),
+    h("div", { class: "small" }, `Each team draw was played twice with sides swapped. Of the ${m.pairs.complete} draws where both battles finished:`),
+    stackBar([
+      { n: m.pairs.a_both, cls: "c", tip: `${m.labels[0]} won both` },
+      { n: m.pairs.split, cls: "n1", tip: "One each" },
+      { n: m.pairs.b_both, cls: "x", tip: `${m.labels[1]} won both` },
+    ], m.pairs.complete),
+    h("div", { class: "legend" },
+      h("span", { class: "key" }, h("i", { class: "swatch", style: { background: "var(--talk)" } }), `${m.labels[0]} won both (${m.pairs.a_both})`),
+      h("span", { class: "key" }, h("i", { class: "swatch", style: { background: "var(--neutral)" } }), `One each (${m.pairs.split})`),
+      h("span", { class: "key" }, h("i", { class: "swatch", style: { background: "var(--other)" } }), `${m.labels[1]} won both (${m.pairs.b_both})`)),
+    m.crashes ? h("p", { class: "small" }, `${m.crashes} battles crashed and are left out.`) : null));
+}
+
+const SHORT = { A: "No talk", B: "One message", C: "Free talk", D: "Solo" };
+
+function scatter(conditions) {
+  const W = 560, H = 300, L = 54, R = 24, T = 16, B = 44;
+  const xs = conditions.map((c) => c.usage.output_tokens_per_battle);
+  const xMax = Math.ceil(Math.max(...xs) / 10000) * 10000 + 5000;
+  const x = (v) => L + (v / xMax) * (W - L - R);
+  const y = (v) => T + (1 - v) * (H - T - B);
+  const ns = "http://www.w3.org/2000/svg";
+  const s = (tag, attrs, text) => { const n = document.createElementNS(ns, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); if (text != null) n.textContent = text; return n; };
+  const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Win rate against output tokens per battle" });
+  for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+    svg.append(s("line", { x1: L, x2: W - R, y1: y(t), y2: y(t), stroke: "var(--rule)", "stroke-width": 1, "stroke-dasharray": t === 0.5 ? "4 4" : "" }));
+    svg.append(s("text", { x: L - 8, y: y(t) + 4, "text-anchor": "end" }, pct(t)));
+  }
+  for (let v = 0; v <= xMax; v += 10000) svg.append(s("text", { x: x(v), y: H - B + 18, "text-anchor": "middle" }, v ? (v / 1000) + "k" : "0"));
+  svg.append(s("text", { x: (L + W - R) / 2, y: H - 6, "text-anchor": "middle" }, "output tokens per battle (thinking + messages)"));
+  for (const c of conditions) {
+    const cx = x(c.usage.output_tokens_per_battle), cy = y(c.rate);
+    svg.append(s("line", { x1: cx, x2: cx, y1: y(c.ci[0]), y2: y(c.ci[1]), stroke: "var(--talk-soft)", "stroke-width": 4, "stroke-linecap": "round" }));
+    const dot = s("circle", { cx, cy, r: 7, fill: c.letter === "C" ? "var(--talk)" : "var(--neutral-2)", stroke: "var(--surface)", "stroke-width": 2, tabindex: 0,
+      "data-tip": `${c.label}\n${fmtK(c.usage.output_tokens_per_battle)} output tokens per battle\nwin rate ${pct(c.rate)}` });
+    svg.append(dot);
+    svg.append(s("text", { x: cx + 12, y: cy + 4, class: "lbl" }, `${c.letter} ${SHORT[c.letter] || c.label}`));
+  }
+  return h("section", { class: "card scatter" },
+    h("h2", {}, "Win rate against how much the team generates"),
+    h("p", { class: "muted" }, "Talking teams also think more. Part of the gain may come from extra thinking, not the talk itself."),
+    svg);
+}
+
+function styleChart(conditions, h2h) {
+  const teams = [...conditions.map((c) => ({ name: `${c.letter} ${c.label}`, s: c.style, hi: c.letter === "C" }))];
+  for (const m of h2h) m.labels.forEach((label, i) => teams.push({ name: `${label} (head to head)`, s: m.style[i], hi: i === 0 }));
+  const panel = (title, note, fn) => h("div", { style: { display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 } },
+    h("h3", {}, title), h("p", { class: "small" }, note),
+    h("div", { class: "bars" }, teams.flatMap((t) => {
+      const [num, den] = fn(t.s);
+      const v = den ? num / den : 0;
+      return [h("div", {}, t.name),
+        h("div", { class: "bar" }, h("i", { class: t.hi ? "" : "dim", style: { width: pct(v, 2) }, tabindex: 0, "data-tip": `${t.name}\n${num} of ${den} (${pct(v)})` })),
+        h("div", { class: "num", style: { textAlign: "right" } }, pct(v))];
+    })));
+  return h("section", { class: "card" },
+    h("h2", {}, "How the teams play"),
+    h("p", { class: "muted" }, "Counted from every choice. Doubles guides favour focus fire (both attack one foe), Protect and speed control."),
+    h("div", { class: "grid2" },
+      panel("Focus fire", "Turns where both attacked the same foe, out of turns where both attacked a foe.", (s) => [s.focus_turns || 0, (s.focus_turns || 0) + (s.split_turns || 0)]),
+      panel("Protect", "Protect-type moves used, out of choices where one was available.", (s) => [s.protect_used || 0, s.protect_available || 0]),
+      panel("Speed control", "Tailwind, Trick Room, Icy Wind and similar, out of choices where one was available.", (s) => [s.speed_used || 0, s.speed_available || 0]),
+      panel("Switching", "Choices that switched Pokémon (including replacing a fainted one), out of all choices.", (s) => [s.switches || 0, s.decisions || 0])));
+}
+
+function usageTable(conditions, h2h) {
+  const rows = conditions.map((c) => ({ name: `${c.letter} ${c.label}`, u: c.usage }));
+  for (const m of h2h) m.labels.forEach((label, i) => rows.push({ name: `${label} (head to head)`, u: m.usage[i] }));
+  const cols = [
+    ["Rounds per battle", (u) => u.rounds_per_battle],
+    ["Messages per round", (u) => u.messages_per_round ?? "–"],
+    ["Words per message", (u) => u.words_per_message ?? "–"],
+    ["Model calls per battle", (u) => u.model_calls_per_battle],
+    ["Prompt tokens per battle", (u) => fmtK(u.prompt_tokens_per_battle)],
+    ["Output tokens per battle", (u) => fmtK(u.output_tokens_per_battle)],
+    ["Valid replies", (u) => pct(u.valid_reply_rate, 1)],
+  ];
+  return h("section", { class: "card" },
+    h("h2", {}, "Talk and cost per team"),
+    h("div", { class: "tablewrap" }, h("table", {},
+      h("thead", {}, h("tr", {}, h("th", {}, "Team"), cols.map(([name]) => h("th", {}, name)))),
+      h("tbody", {}, rows.map((r) => h("tr", {}, h("td", {}, r.name), cols.map(([, f]) => h("td", {}, String(f(r.u))))))))),
+    h("p", { class: "small" }, "Output tokens include thinking. No team hit the 20-message limit, and no choice fell back to a random move."));
+}
+
+function explorer(data) {
+  const names = Object.fromEntries([
+    ...data.conditions.map((c) => [c.run, `${c.letter} · ${c.label} vs max-power`]),
+    ...data.head_to_head.map((m) => [m.run, `Head to head · ${m.labels.join(" vs ")}`]),
+  ]);
+  const runSel = h("select", { id: "run" }, Object.entries(names).map(([v, t]) => h("option", { value: v }, t)));
+  runSel.value = "base-free";
+  const list = h("div", { class: "list", role: "list" });
+  const detail = h("div", { class: "detail" });
+  const short = (p) => p.split(" - ")[0];
+
+  function show(b, button) {
+    list.querySelectorAll(".item").forEach((n) => n.setAttribute("aria-current", "false"));
+    button?.setAttribute("aria-current", "true");
+    detail.replaceChildren();
+    const blueWon = b.winner === "p1p3";
+    detail.append(h("div", {},
+      h("h3", {}, b.key),
+      h("p", { class: "small" }, `${blueWon ? "Blue" : "Red"} team won in ${b.turns} turns · ${b.minutes} min · ` +
+        Object.entries(b.players).map(([s, p]) => `${short(p)}: ${p.split(" - ")[1] || ""}`).join(" · "))));
+    const turns = new Map();
+    for (const e of b.events) { if (!turns.has(e[0])) turns.set(e[0], []); turns.get(e[0]).push(e); }
+    if (!b.events.length) detail.append(h("p", { class: "muted" }, "No talk or choices recorded."));
+    for (const [turn, events] of turns) {
+      const says = events.filter((e) => e[2] === "say");
+      const chooses = events.filter((e) => e[2] === "choose");
+      detail.append(h("div", { class: "turn" },
+        h("h4", {}, `Turn ${turn}`),
+        says.map((e) => h("div", { class: "msg" },
+          h("span", { class: "who " + (e[1] === "p1" || e[1] === "p3" ? "blue" : "red") }, short(b.players[e[1]])),
+          h("span", { class: "text" }, e[3]))),
+        h("div", { class: "choices" }, chooses.map((e) => h("span", { class: "chip" },
+          h("b", { class: e[1] === "p1" || e[1] === "p3" ? "blue" : "red" }, short(b.players[e[1]])), e[3])))));
+    }
+    detail.scrollTop = 0;
+  }
+
+  function fill() {
+    const battles = data.battles.filter((b) => b.run === runSel.value);
+    list.replaceChildren(...battles.map((b) => {
+      const won = b.winner === "p1p3";
+      const button = h("button", { class: "item", role: "listitem", "aria-current": "false" },
+        h("span", { class: "num" }, b.key.replace("base-free-", "#")),
+        h("span", { class: "small num" }, `${b.turns}t`),
+        h("span", { class: "pill " + (won ? "win" : "loss") }, won ? "Blue won" : "Red won"));
+      button.addEventListener("click", () => show(b, button));
+      return button;
+    }));
+    if (battles.length) show(battles[0], list.firstChild);
+  }
+  runSel.addEventListener("change", fill);
+  fill();
+  return h("section", { class: "card" },
+    h("h2", {}, "Read a battle"),
+    h("p", { class: "muted" }, "Every message and choice, turn by turn. Blue is the Qwen team (in head to head, Blue talks and Red does not). #00003m is the same draw as #00003 with sides swapped."),
+    h("div", { class: "controls" }, h("label", { for: "run", class: "small" }, "Run"), runSel),
+    h("div", { class: "explorer" }, list, detail));
+}
+
+function summaryTiles(data) {
+  const c = Object.fromEntries(data.conditions.map((x) => [x.letter, x]));
+  const m = data.head_to_head[0];
+  const total = data.conditions.reduce((n, x) => n + x.battles, 0) + data.head_to_head.reduce((n, x) => n + x.battles, 0);
+  const planned = 50 * (data.conditions.length + data.head_to_head.length);
+  const tile = (label, big, note) => h("div", { class: "tile" }, h("div", { class: "eyebrow" }, label), big, h("div", { class: "small" }, note));
+  return h("div", { class: "tiles" },
+    tile("Free talk vs no talk", h("div", { class: "big" }, pct(c.C.rate), h("span", { class: "vs" }, " vs "), pct(c.A.rate)), "win rate against the max-power bot"),
+    tile("Same teams, battle by battle", h("div", { class: "big" }, `${c.A.vs_free_talk.only_base}`, h("span", { class: "vs" }, " to "), `${c.A.vs_free_talk.only_other}`), "battles only free talk won vs only no talk won"),
+    m ? tile("Head to head", h("div", { class: "big" }, pct(m.rate)), `free talk won ${m.wins} of ${m.battles} against no talk`) : null,
+    tile("Battles finished", h("div", { class: "big" }, `${total}`, h("span", { class: "vs" }, ` / ${planned}`)), "crashed battles are being rerun"));
+}
+
+fetch("data.json").then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((data) => {
+  $("#content").replaceWith(h("div", { style: { display: "flex", flexDirection: "column", gap: "20px" } },
+    summaryTiles(data),
+    winRates(data.conditions),
+    h("div", { class: "grid2" }, pairedChart(data.conditions), headToHead(data.head_to_head)),
+    scatter(data.conditions),
+    styleChart(data.conditions, data.head_to_head),
+    usageTable(data.conditions, data.head_to_head),
+    explorer(data)));
+}).catch((err) => {
+  $("#content").replaceChildren(h("p", { class: "err" }, `Could not load the results file (data.json): ${err.message}. Rebuild it with scripts/dashboard/build_data.py and publish it next to this page.`));
+});
+</script>
