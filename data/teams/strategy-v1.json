@@ -1,0 +1,90 @@
+{
+ "kind": "strategy",
+ "label": "strategy-v1",
+ "teams": [
+  {
+   "id": "Trick Room",
+   "halves": {
+    "first": {
+     "packed": "Indeedee-F||PsychicSeed|PsychicSurge|FollowMe,HelpingHand,TrickRoom,Psychic|Relaxed|252,,196,,60,||,,,,,0||50|]Amoonguss||RockyHelmet|Regenerator|RagePowder,Spore,PollenPuff,Protect|Relaxed|252,,156,,100,||,,,,,0||50|]Porygon2||Eviolite|Download|TrickRoom,IceBeam,TriAttack,Recover|Sassy|252,,116,,140,||,,,,,0||50|",
+     "species": [
+      "Indeedee-F",
+      "Amoonguss",
+      "Porygon2"
+     ]
+    },
+    "second": {
+     "packed": "Hatterene||FocusSash|MagicBounce|TrickRoom,ExpandingForce,DazzlingGleam,Protect|Quiet|252,,4,252,,||,0,,,,0||50|]Ursaluna||FlameOrb|Guts|Facade,HeadlongRush,Crunch,Protect|Brave|252,252,,,4,||,,,,,0||50|]Iron Hands||AssaultVest|QuarkDrive|FakeOut,DrainPunch,WildCharge,HeavySlam|Brave|252,252,,,4,||,,,,,0||50|",
+     "species": [
+      "Hatterene",
+      "Ursaluna",
+      "Iron Hands"
+     ]
+    }
+   }
+  },
+  {
+   "id": "Tailwind",
+   "halves": {
+    "first": {
+     "packed": "Tornadus||CovertCloak|Prankster|Tailwind,BleakwindStorm,Taunt,Protect|Timid|252,,,4,,252||,0,,,,||50|]Incineroar||SitrusBerry|Intimidate|FakeOut,FlareBlitz,KnockOff,PartingShot|Careful|252,4,116,,132,4||||50|]Gholdengo||LifeOrb|GoodasGold|MakeItRain,ShadowBall,NastyPlot,Protect|Modest|4,,,252,,252||,0,,,,||50|",
+     "species": [
+      "Tornadus",
+      "Incineroar",
+      "Gholdengo"
+     ]
+    },
+    "second": {
+     "packed": "Garchomp||ClearAmulet|RoughSkin|Earthquake,DragonClaw,RockSlide,Protect|Jolly|4,252,,,,252||||50|]Urshifu-Rapid-Strike||FocusSash|UnseenFist|SurgingStrikes,CloseCombat,AquaJet,Protect|Jolly|4,252,,,,252||||50|]Dragonite||ChoiceBand|Multiscale|ExtremeSpeed,DragonClaw,FirePunch,IronHead|Adamant|252,252,,,,4||||50|",
+     "species": [
+      "Garchomp",
+      "Urshifu-Rapid-Strike",
+      "Dragonite"
+     ]
+    }
+   }
+  },
+  {
+   "id": "Rain",
+   "halves": {
+    "first": {
+     "packed": "Pelipper||FocusSash|Drizzle|Hurricane,WeatherBall,Tailwind,WideGuard|Modest|252,,,252,4,||,0,,,,||50|]Rillaboom||AssaultVest|GrassySurge|FakeOut,GrassyGlide,WoodHammer,Uturn|Adamant|252,252,,,4,||||50|]Kingambit||BlackGlasses|Defiant|KowtowCleave,SuckerPunch,IronHead,Protect|Adamant|252,252,,,4,||||50|",
+     "species": [
+      "Pelipper",
+      "Rillaboom",
+      "Kingambit"
+     ]
+    },
+    "second": {
+     "packed": "Barraskewda||LifeOrb|SwiftSwim|Liquidation,CloseCombat,AquaJet,Protect|Adamant|4,252,,,,252||||50|]Archaludon||Leftovers|Stamina|ElectroShot,DracoMeteor,FlashCannon,Protect|Modest|252,,,252,4,||,0,,,,||50|]Basculegion||MysticWater|SwiftSwim|WaveCrash,AquaJet,PsychicFangs,Protect|Adamant|4,252,,,,252||||50|",
+     "species": [
+      "Barraskewda",
+      "Archaludon",
+      "Basculegion"
+     ]
+    }
+   }
+  },
+  {
+   "id": "Sun",
+   "halves": {
+    "first": {
+     "packed": "Torkoal||Charcoal|Drought|Eruption,HeatWave,EarthPower,Protect|Quiet|252,,,252,4,||,0,,,,0||50|]Whimsicott||CovertCloak|Prankster|Tailwind,Moonblast,Encore,SunnyDay|Timid|252,,4,,,252||,0,,,,||50|]Arcanine||SitrusBerry|Intimidate|FlareBlitz,ExtremeSpeed,WillOWisp,Protect|Impish|252,4,252,,,||||50|",
+     "species": [
+      "Torkoal",
+      "Whimsicott",
+      "Arcanine"
+     ]
+    },
+    "second": {
+     "packed": "Lilligant-Hisui||FocusSash|Chlorophyll|AfterYou,LeafBlade,CloseCombat,SleepPowder|Jolly|4,252,,,,252||||50|]Venusaur||LifeOrb|Chlorophyll|GigaDrain,EarthPower,SleepPowder,Protect|Modest|4,,,252,,252||,0,,,,||50|]Great Tusk||BoosterEnergy|Protosynthesis|HeadlongRush,CloseCombat,IceSpinner,Protect|Jolly|4,252,,,,252||||50|",
+     "species": [
+      "Lilligant-Hisui",
+      "Venusaur",
+      "Great Tusk"
+     ]
+    }
+   }
+  }
+ ]
+}

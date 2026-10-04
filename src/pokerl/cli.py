@@ -18,7 +18,7 @@ from pokerl.llm_batch import SIDE_MODES, read_records, run_llm_batch
 from pokerl.models import MODELS, ChatClient, load_env
 from pokerl.replay import write_replay
 from pokerl.runner import bot_sides, play, run_batch, summarize
-from pokerl.teams import DEFAULT_POOL, generate_pool, load_pool, make_specs
+from pokerl.teams import DEFAULT_POOL, build_strategy_pool, generate_pool, load_pool, make_specs
 
 
 def seat_policies(args: argparse.Namespace) -> dict[str, str]:
@@ -37,6 +37,15 @@ def cmd_teams(args: argparse.Namespace) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(pool, indent=1) + "\n", encoding="utf-8")
     print(f"Wrote {len(pool['teams'])} teams to {out}")
+
+
+def cmd_strategy_teams(args: argparse.Namespace) -> None:
+    with Bridge() as bridge:
+        pool = build_strategy_pool(bridge, Path(args.text))
+    out = Path(args.out)
+    out.write_text(json.dumps(pool, indent=1) + "\n", encoding="utf-8")
+    names = ", ".join(team["id"] for team in pool["teams"])
+    print(f"Wrote {len(pool['teams'])} strategy teams to {out}: {names}")
 
 
 def cmd_run(args: argparse.Namespace) -> None:
@@ -193,6 +202,11 @@ def main(argv: list[str] | None = None) -> None:
     teams.add_argument("--label", default="v1")
     teams.add_argument("--out", default=str(DEFAULT_POOL))
     teams.set_defaults(func=cmd_teams)
+
+    strategy = sub.add_parser("strategy-teams", help="pack a text file of strategy teams into a pool")
+    strategy.add_argument("--text", default="data/teams/strategy-v1.txt")
+    strategy.add_argument("--out", default="data/teams/strategy-v1.json")
+    strategy.set_defaults(func=cmd_strategy_teams)
 
     run = sub.add_parser("run", help="play a batch of battles between scripted policies")
     run.add_argument("--label", required=True, help="names the output folder and seeds the battles")

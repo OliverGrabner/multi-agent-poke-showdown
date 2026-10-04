@@ -31,6 +31,24 @@ class ModelConfig:
     params: dict = field(default_factory=dict)  # sampling settings from the model card
 
 
+# Qwen3.8 model card sampling (checked 2026-10-04), for thinking and for non-thinking ("instruct") mode.
+QWEN_THINKING = {
+    "temperature": 1.0,
+    "top_p": 0.95,
+    "top_k": 20,
+    "min_p": 0.0,
+    "presence_penalty": 0.0,
+    "repetition_penalty": 1.0,
+}
+QWEN_INSTRUCT = {
+    "temperature": 0.7,
+    "top_p": 0.8,
+    "top_k": 20,
+    "min_p": 0.0,
+    "presence_penalty": 1.5,
+    "repetition_penalty": 1.0,
+}
+
 MODELS = {
     # Smoke test only (2.5-flash-lite is closed to new users). Prices: ai.google.dev/gemini-api/docs/pricing, 2026-10-03.
     "gemini-3.1-flash-lite": ModelConfig(
@@ -68,17 +86,28 @@ MODELS = {
         base_url="$QWEN_BASE_URL",
         key_env="VLLM_API_KEY",
         params={
-            "temperature": 1.0,
-            "top_p": 0.95,
-            "top_k": 20,
-            "min_p": 0.0,
-            "presence_penalty": 0.0,
-            "repetition_penalty": 1.0,
+            **QWEN_THINKING,
             # Thinking on, at the card's "medium" effort (the default "xhigh" ran 6-20k tokens per
             # decision). preserve_thinking stays at the card's default (on): earlier thinking
             # stays in the conversation.
             "chat_template_kwargs": {"enable_thinking": True, "reasoning_effort": "medium"},
         },
+    ),
+    # The same Qwen server with less thinking: "low" effort (official setting), and none at all.
+    "qwen3.8-27b-low": ModelConfig(
+        model="Qwen/Qwen3.8-27B",
+        base_url="$QWEN_BASE_URL",
+        key_env="VLLM_API_KEY",
+        params={
+            **QWEN_THINKING,
+            "chat_template_kwargs": {"enable_thinking": True, "reasoning_effort": "low"},
+        },
+    ),
+    "qwen3.8-27b-nothink": ModelConfig(
+        model="Qwen/Qwen3.8-27B",
+        base_url="$QWEN_BASE_URL",
+        key_env="VLLM_API_KEY",
+        params={**QWEN_INSTRUCT, "chat_template_kwargs": {"enable_thinking": False}},
     ),
     # Second model family, served by vLLM on HPRC; used only if it passes the tool-call check.
     # Sampling: model card (checked 2026-10-03).

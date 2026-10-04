@@ -8,7 +8,7 @@ from pokerl.bridge import Bridge
 from pokerl.cli import reproducibility_check
 from pokerl.env import InvalidAction, MultiBattleEnv
 from pokerl.runner import bot_sides, play
-from pokerl.teams import load_pool, make_specs
+from pokerl.teams import build_strategy_pool, load_pool, make_specs
 
 
 @pytest.fixture(scope="module")
@@ -130,3 +130,18 @@ def test_maxpower_beats_random_over_mirrored_pairs(bridge, pool):
 def test_step_rng_is_stateless():
     assert step_rng("s", "p1", 3).random() == step_rng("s", "p1", 3).random()
     assert isinstance(step_rng("s", "p1", 3), random.Random)
+
+
+def test_strategy_teams_split_between_partners_and_play_mirror_matches(bridge):
+    pool = build_strategy_pool(bridge, "data/teams/strategy-v1.txt")
+    assert [team["id"] for team in pool["teams"]] == ["Trick Room", "Tailwind", "Rain", "Sun"]
+    trick_room = pool["teams"][0]["halves"]
+    assert trick_room["first"]["species"][0] == "Indeedee-F"  # the lead comes first
+    assert trick_room["second"]["species"][0] == "Hatterene"
+    specs = make_specs(pool, 5, "test")
+    assert len(specs) == 5  # one battle per seed: a mirror match has no sides to swap
+    assert specs[0].teams["p1"] == specs[0].teams["p2"] == trick_room["first"]["packed"]
+    assert specs[0].teams["p3"] == specs[0].teams["p4"] == trick_room["second"]["packed"]
+    assert specs[4].team_ids["p1"] == "Trick Room (first)"  # the cycle starts over
+    record = play(MultiBattleEnv(bridge), specs[1], bot_sides(dict.fromkeys(SEATS, "maxpower")))
+    assert record["winning_side"] in ("p1p3", "p2p4") and record["turns"] > 0

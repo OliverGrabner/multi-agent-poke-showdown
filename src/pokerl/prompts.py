@@ -5,7 +5,7 @@ The game and observation sections are shared; only the talking section changes w
 """
 
 GAME = """\
-You are {you}, playing a Pokémon Showdown Multi Battle (Gen 9, random teams).
+You are {you}, playing a Pokémon Showdown Multi Battle (Gen 9).
 
 THE GAME
 - Four players, two per side. You and your teammate {partner} are one side; two opponents are \
@@ -78,7 +78,7 @@ turn plays out.
 """
 
 SOLO = """\
-You control both players on one side of a Pokémon Showdown Multi Battle (Gen 9, random teams): \
+You control both players on one side of a Pokémon Showdown Multi Battle (Gen 9): \
 {first} and {second}.
 
 THE GAME

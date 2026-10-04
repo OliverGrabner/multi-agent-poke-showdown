@@ -1,7 +1,12 @@
-"""Fixed team pools and battle specs (seed + team assignment, with optional side-swapped mirrors)."""
+"""Fixed team pools and battle specs (seed + team assignment, with optional side-swapped mirrors).
+
+Two kinds of pool: random-battle teams (one per player, drawn at random for each battle), and
+strategy teams (a doubles team split between the two partners, played in fixed matchups).
+"""
 
 from __future__ import annotations
 
+import itertools
 import json
 import random
 from dataclasses import dataclass
@@ -21,6 +26,22 @@ def generate_pool(bridge: Bridge, size: int, label: str, format: str = TEAM_FORM
     version = bridge.call("ping")["showdown"]
     teams = [{"id": f"{label}-{i:03d}", **team} for i, team in enumerate(generated)]
     return {"format": format, "label": label, "showdown_version": version, "teams": teams}
+
+
+def build_strategy_pool(bridge: Bridge, path: Path) -> dict:
+    """Strategy teams from a text file of `=== Name | first` / `=== Name | second` blocks.
+
+    Each block is one partner's three Pokémon in Showdown's export format, lead first; `#` lines
+    are comments. Both halves of a team go to the same side, one per partner.
+    """
+    teams: dict[str, dict] = {}
+    for block in Path(path).read_text(encoding="utf-8").split("\n=== ")[1:]:
+        header, _, body = block.partition("\n")
+        name, _, half = (part.strip() for part in header.partition("|"))
+        text = "\n".join(line for line in body.splitlines() if not line.startswith("#"))
+        team = teams.setdefault(name, {"id": name, "halves": {}})
+        team["halves"][half] = bridge.call("pack", text=text)
+    return {"kind": "strategy", "label": Path(path).stem, "teams": list(teams.values())}
 
 
 def load_pool(path: Path = DEFAULT_POOL) -> dict:
@@ -52,9 +73,13 @@ def draw_teams(pool: dict, rng: random.Random) -> list[dict]:
 def make_specs(pool: dict, pairs: int, label: str, mirror: bool = True) -> list[BattleSpec]:
     """`pairs` seeds; with `mirror`, each seed is played twice with the two sides' teams swapped.
 
+    A strategy pool plays mirror matches, one team per seed in turn (see matchup_specs).
+
     Swapping teams between sides while seat policies stay fixed cancels team and seed luck
     within each pair, so comparisons need fewer battles.
     """
+    if pool.get("kind") == "strategy":
+        return matchup_specs(pool, pairs, label, mirror)
     specs = []
     for i in range(pairs):
         seed = make_seed("battle", label, i)
@@ -70,6 +95,41 @@ def make_specs(pool: dict, pairs: int, label: str, mirror: bool = True) -> list[
                     seed=seed,
                     team_ids={seat: team["id"] for seat, team in layout.items()},
                     teams={seat: team["packed"] for seat, team in layout.items()},
+                    pair=i,
+                    mirrored=bool(mirrored),
+                )
+            )
+    return specs
+
+
+def matchup_specs(
+    pool: dict, pairs: int, label: str, mirror: bool = True, same_team: bool = True
+) -> list[BattleSpec]:
+    """Seed i plays matchup i, cycling through the matchups.
+
+    With `same_team`, both sides get the same team (a mirror match, even by construction): bot
+    play showed matchups between different archetypes are lopsided (e.g. sun beat rain 39 to 1).
+    Without it, every pair of different teams is played, sides swapped in the mirror battle.
+    A mirror match has nothing to swap, so it is played once per seed.
+    A team goes to one side: its first half to p1 or p2, its second half to that player's partner.
+    """
+    teams = pool["teams"]
+    matchups = [(t, t) for t in teams] if same_team else list(itertools.combinations(teams, 2))
+    specs = []
+    for i in range(pairs):
+        seed = make_seed("battle", label, i)
+        blue, red = matchups[i % len(matchups)]
+        sides = [(blue, red), (red, blue)] if mirror and not same_team else [(blue, red)]
+        for mirrored, (a, b) in enumerate(sides):
+            halves = {
+                "p1": (a, "first"), "p3": (a, "second"), "p2": (b, "first"), "p4": (b, "second")
+            }  # fmt: skip
+            specs.append(
+                BattleSpec(
+                    battle_key=f"{label}-{i:05d}{'m' if mirrored else ''}",
+                    seed=seed,
+                    team_ids={seat: f"{team['id']} ({half})" for seat, (team, half) in halves.items()},
+                    teams={seat: team["halves"][half]["packed"] for seat, (team, half) in halves.items()},
                     pair=i,
                     mirrored=bool(mirrored),
                 )

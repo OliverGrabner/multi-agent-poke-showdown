@@ -185,6 +185,12 @@ const handlers = {
     });
   },
 
+  // Pack a team written in Showdown's export format (the team builder's text).
+  pack(args) {
+    const sets = Teams.import(args.text);
+    return { packed: Teams.pack(sets), species: sets.map(set => set.species) };
+  },
+
   start(args) {
     if (battles.has(args.battle_id)) throw new Error(`Battle ${args.battle_id} already exists`);
     battles.set(args.battle_id, { battle: newBattle(args), cursor: 0 });
