@@ -9,198 +9,96 @@ counted directly from the battle logs; rerun after new battles arrive.
 from __future__ import annotations
 
 import json
-import re
 import sys
-from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
-from pokerl import FOES
 from pokerl.analysis import side_report
 from pokerl.llm_batch import read_records
-from pokerl.models import output_tokens
 from pokerl.runner import wilson
 
-# Runs against the max-power bot (side p1p3 is the Qwen team), then head-to-head runs.
+# Runs against the max-power bot; the Qwen team is side p1p3. Ordered by how much the team may talk.
 RUNS = {
-    "base-notalk": ("A", "No talk"),
-    "base-onemsg": ("B", "One message each"),
-    "base-free": ("C", "Free talk"),
-    "base-solo": ("D", "One model, both Pokémon"),
+    "base-notalk": "No talk",
+    "base-onemsg": "One message each",
+    "base-free": "Free talk",
+    "base-solo": "One model controls both",
 }
+# Head-to-head runs: (label of side p1p3, label of side p2p4). Both sides are Qwen.
 HEAD_TO_HEAD = {"h2h-free-notalk": ("Free talk", "No talk")}
 
-PROTECT = {"Protect", "Detect", "Spiky Shield", "King's Shield", "Baneful Bunker", "Silk Trap",
-           "Burning Bulwark", "Obstruct", "Wide Guard", "Quick Guard"}  # fmt: skip
-SPEED_CONTROL = {"Tailwind", "Trick Room", "Icy Wind", "Electroweb", "Thunder Wave", "Bulldoze",
-                 "Glare", "Scary Face", "String Shot", "Rock Tomb", "Nuzzle"}  # fmt: skip
+
+def finished(records: list[dict]) -> list[dict]:
+    return [r for r in records if "crash" not in r]
 
 
-def option_names(observation: str) -> set[str]:
-    """Move or switch names from the numbered options at the end of an observation."""
-    options = re.findall(r"^\d+\. (.+)$", observation, re.M)
-    return {re.split(r" →| \|", option)[0] for option in options}
+def wins(records: list[dict], side: str) -> dict:
+    done = finished(records)
+    won = sum(r["winning_side"] == side for r in done)
+    low, high = wilson(won, len(done))
+    return {"wins": won, "battles": len(done), "rate": won / len(done), "ci": [low, high]}
 
 
-def foe_faints_per_turn(record: dict, side: str) -> Counter:
-    foes = {"p1p3": "p[24]", "p2p4": "p[13]"}[side]
-    faints, turn = Counter(), 0
-    for line in record["omniscient_log"]:
-        if line.startswith("|turn|"):
-            turn = int(line.split("|")[2])
-        elif re.match(rf"\|faint\|{foes}a", line):
-            faints[turn] += 1
-    return faints
-
-
-def play_style(records: list[dict], side: str) -> dict:
-    """How the team used its turns: focus fire vs split targets, Protect, speed control."""
-    counts = Counter()
-    for record in records:
-        if "crash" in record:
-            continue
-        faints = foe_faints_per_turn(record, side)
-        last_seen: dict[str, str] = {}
-        chosen_by_step: dict[int, dict] = {}
-        for event in record["sides"][side]["transcript"]:
-            if event["event"] == "observation":
-                last_seen[event["seat"]] = event["text"]
-            elif event["event"] == "choose":
-                seat, move = event["seat"], event["label"].split(" →")[0]
-                chosen_by_step.setdefault(event["step"], {})[seat] = event
-                names = option_names(last_seen.get(seat, ""))
-                counts["decisions"] += 1
-                counts["switches"] += move.startswith("Switch to")
-                for kind, group in (("protect", PROTECT), ("speed", SPEED_CONTROL)):
-                    if names & group:
-                        counts[f"{kind}_available"] += 1
-                        counts[f"{kind}_used"] += move in group
-        for chosen in chosen_by_step.values():
-            targets = []
-            for seat, event in chosen.items():
-                found = re.search(r"\((p[1-4])\)$", event["label"])
-                if found and found.group(1) in FOES[seat]:
-                    targets.append(found.group(1))
-            if len(targets) == 2:
-                kind = "focus" if targets[0] == targets[1] else "split"
-                counts[f"{kind}_turns"] += 1
-                counts[f"{kind}_kos"] += faints[int(next(iter(chosen.values()))["turn"])]
-    return dict(counts)
-
-
-def side_numbers(team: dict) -> dict:
-    """Tokens, messages per round and message lengths for one model-backed side of one battle."""
-    events = team["transcript"]
-    rounds = sorted({event["step"] for event in events if event["event"] == "observation"})
-    says = Counter(event["step"] for event in events if event["event"] == "say")
-    calls = [call for log in team["agent_logs"].values() for call in log["calls"]]
+def paired_with(base: list[dict], other: list[dict]) -> dict:
+    """Battles both runs played on the same seed: how many only one of them won."""
+    won = {r["battle_key"]: r["winning_side"] == "p1p3" for r in finished(base)}
+    won_other = {r["battle_key"]: r["winning_side"] == "p1p3" for r in finished(other)}
+    keys = won.keys() & won_other.keys()
     return {
-        "output_tokens": sum(output_tokens(call["usage"]) for call in calls),
-        "prompt_tokens": sum(call["usage"].get("prompt_tokens", 0) for call in calls),
-        "messages_per_round": [says.get(step, 0) for step in rounds],
-        "words": [len(event["text"].split()) for event in events if event["event"] == "say"],
+        "shared": len(keys),
+        "only_base": sum(won[k] and not won_other[k] for k in keys),
+        "only_other": sum(won_other[k] and not won[k] for k in keys),
     }
 
 
 def battle_rows(records: list[dict], run: str, sides: tuple[str, ...]) -> list[dict]:
-    """One row per finished battle, with the talk and choices of the model-backed sides."""
-    rows = []
-    for record in records:
-        if "crash" in record:
-            continue
-        rows.append(
-            {
-                "run": run,
-                "key": record["battle_key"],
-                "winner": record["winning_side"],
-                "turns": record["turns"],
-                "minutes": round(record["seconds"] / 60, 1),
-                "players": record["players"],
-                "sides": {side: side_numbers(record["sides"][side]) for side in sides},
-                "events": [
-                    [event["turn"], event["seat"], event["event"], event.get("text") or event["label"]]
-                    for side in sides
-                    for event in record["sides"][side].get("transcript", [])
-                    if event["event"] in ("say", "choose")
-                ],
-            }
-        )
-    return rows
-
-
-def win_summary(records: list[dict], side: str = "p1p3") -> dict:
-    finished = [r for r in records if "crash" not in r]
-    wins = sum(r["winning_side"] == side for r in finished)
-    low, high = wilson(wins, len(finished))
-    return {
-        "wins": wins,
-        "battles": len(finished),
-        "crashes": len(records) - len(finished),
-        "rate": wins / len(finished) if finished else None,
-        "ci": [low, high],
-        "turns": [r["turns"] for r in finished],
-        "won": [r["winning_side"] == side for r in finished],
-    }
-
-
-def paired(base: list[dict], other: list[dict]) -> dict:
-    """Battle-by-battle comparison on the same seeds and teams."""
-    won = {r["battle_key"]: r["winning_side"] == "p1p3" for r in base if "crash" not in r}
-    won_other = {r["battle_key"]: r["winning_side"] == "p1p3" for r in other if "crash" not in r}
-    keys = won.keys() & won_other.keys()
-    return {
-        "shared": len(keys),
-        "both": sum(won[k] and won_other[k] for k in keys),
-        "only_base": sum(won[k] and not won_other[k] for k in keys),
-        "only_other": sum(won_other[k] and not won[k] for k in keys),
-        "neither": sum(not won[k] and not won_other[k] for k in keys),
-    }
-
-
-def mirror_pairs(records: list[dict]) -> dict:
-    """Seeds where both battles (teams swapped) finished: did the p1p3 side win both, one or none?"""
-    by_seed: dict[str, list[bool]] = {}
-    for record in records:
-        if "crash" not in record:
-            by_seed.setdefault(record["battle_key"].rstrip("m"), []).append(record["winning_side"] == "p1p3")
-    complete = [wins for wins in by_seed.values() if len(wins) == 2]
-    return {
-        "complete": len(complete),
-        "a_both": sum(all(w) for w in complete),
-        "split": sum(sum(w) == 1 for w in complete),
-        "b_both": sum(not any(w) for w in complete),
-    }
+    """One row per finished battle, with every message and choice of the model-backed sides."""
+    return [
+        {
+            "run": run,
+            "key": r["battle_key"],
+            "winner": r["winning_side"],
+            "turns": r["turns"],
+            "players": r["players"],
+            "events": [
+                [e["turn"], e["seat"], e["event"], e.get("text") or e["label"]]
+                for side in sides
+                for e in r["sides"][side].get("transcript", [])
+                if e["event"] in ("say", "choose")
+            ],
+        }
+        for r in finished(records)
+    ]
 
 
 def main(runs_dir: Path, out_path: Path) -> None:
-    runs = {name: read_records(runs_dir / name / "battles.jsonl") for name in RUNS}
-    h2h = {name: read_records(runs_dir / name / "battles.jsonl") for name in HEAD_TO_HEAD}
+    def load(name: str) -> list[dict]:
+        return read_records(runs_dir / name / "battles.jsonl")
+
+    free_talk = load("base-free")
     built = datetime.now().strftime("%Y-%m-%d %H:%M")
     data = {"built": built, "conditions": [], "head_to_head": [], "battles": []}
-    for name, (letter, label) in RUNS.items():
-        records = runs[name]
+    for name, label in RUNS.items():
+        records = load(name)
         data["conditions"].append(
             {
                 "run": name,
-                "letter": letter,
                 "label": label,
-                **win_summary(records),
+                "crashes": len(records) - len(finished(records)),
+                **wins(records, "p1p3"),
                 "usage": side_report(records, "p1p3"),
-                "style": play_style(records, "p1p3"),
-                "vs_free_talk": None if name == "base-free" else paired(runs["base-free"], records),
+                "vs_free_talk": None if name == "base-free" else paired_with(free_talk, records),
             }
         )
         data["battles"] += battle_rows(records, name, ("p1p3",))
-    for name, (label_a, label_b) in HEAD_TO_HEAD.items():
-        records = h2h[name]
+    for name, labels in HEAD_TO_HEAD.items():
+        records = load(name)
         data["head_to_head"].append(
             {
                 "run": name,
-                "labels": [label_a, label_b],
-                **win_summary(records),
-                "pairs": mirror_pairs(records),
-                "usage": [side_report(records, "p1p3"), side_report(records, "p2p4")],
-                "style": [play_style(records, "p1p3"), play_style(records, "p2p4")],
+                "labels": labels,
+                "crashes": len(records) - len(finished(records)),
+                "sides": [wins(records, "p1p3"), wins(records, "p2p4")],
             }
         )
         data["battles"] += battle_rows(records, name, ("p1p3", "p2p4"))
