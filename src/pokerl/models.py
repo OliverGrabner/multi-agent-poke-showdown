@@ -178,6 +178,10 @@ class ChatClient:
             base_url = os.environ[base_url[1:]]
         self.http = httpx.Client(base_url=base_url.rstrip("/"), timeout=600)
 
+    def for_agent(self) -> ChatClient:
+        """Chat clients are stateless, so agents share one."""
+        return self
+
     def complete(self, messages: list[dict], tools: list[dict]) -> Completion:
         self.check_budget(messages)
         body = {

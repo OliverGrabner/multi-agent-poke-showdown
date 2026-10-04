@@ -21,6 +21,9 @@ class FakeClient:
         self.replies = list(messages)
         self.seen: list[list[dict]] = []
 
+    def for_agent(self) -> "FakeClient":
+        return self
+
     def complete(self, messages: list[dict], tools: list[dict]) -> Completion:
         self.seen.append([dict(m) for m in messages])
         return Completion(

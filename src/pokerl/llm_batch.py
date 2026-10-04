@@ -16,6 +16,7 @@ from pathlib import Path
 from pokerl import PLAYER, SIDES, TEAM_COLOR
 from pokerl.bots import POLICIES, BotSide, make_policy
 from pokerl.bridge import Bridge
+from pokerl.codex_client import CODEX_MODELS, CodexClient
 from pokerl.dex import Dex
 from pokerl.env import MultiBattleEnv
 from pokerl.llm_agent import CHOOSE_ONLY, TOOLS, LLMAgent
@@ -38,12 +39,15 @@ def check_side(player: str, mode: str) -> None:
     if mode not in SIDE_MODES:
         raise ValueError(f"Unknown mode {mode!r}; choose from {SIDE_MODES}")
     for model in models_in(player):
-        if model not in MODELS:
-            raise ValueError(
-                f"{model!r} is neither a model ({sorted(MODELS)}) nor a bot ({sorted(POLICIES)})"
-            )
+        if model not in MODELS and model not in CODEX_MODELS:
+            known = sorted([*MODELS, *CODEX_MODELS])
+            raise ValueError(f"{model!r} is neither a model ({known}) nor a bot ({sorted(POLICIES)})")
     if mode == "solo" and len(models_in(player)) > 1:
         raise ValueError("A solo side is one model controlling both Pokémon; give one model name")
+
+
+def make_client(model: str) -> ChatClient | CodexClient:
+    return CodexClient(model) if model in CODEX_MODELS else ChatClient(model)
 
 
 def make_side(
@@ -56,7 +60,10 @@ def make_side(
     models = models_in(player)
     if mode == "solo":
         agent = LLMAgent(
-            TEAM_COLOR[side], clients[models[0]], solo_prompt(PLAYER[first], PLAYER[second]), CHOOSE_ONLY
+            TEAM_COLOR[side],
+            clients[models[0]].for_agent(),
+            solo_prompt(PLAYER[first], PLAYER[second]),
+            CHOOSE_ONLY,
         )
         return SoloTeam(agent, (first, second), dex, label=models[0])
     seat_models = {first: models[0], second: models[-1]}
@@ -64,7 +71,7 @@ def make_side(
     agents = {
         seat: LLMAgent(
             PLAYER[seat],
-            clients[model],
+            clients[model].for_agent(),
             system_prompt(PLAYER[seat], PLAYER[other], mode, keep_talking=keep_talking),
             tools,
         )
@@ -101,7 +108,7 @@ def run_llm_batch(
     out_path.parent.mkdir(parents=True, exist_ok=True)
     finished = {r["battle_key"] for r in read_records(out_path) if "crash" not in r}
     todo = [spec for spec in specs if spec.battle_key not in finished]
-    clients = {model: ChatClient(model) for model in {*models_in(side_a), *models_in(side_b)}}
+    clients = {model: make_client(model) for model in {*models_in(side_a), *models_in(side_b)}}
 
     local = threading.local()  # one simulator per thread
     bridges: list[Bridge] = []
