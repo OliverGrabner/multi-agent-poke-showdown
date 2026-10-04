@@ -74,8 +74,10 @@ MODELS = {
             "min_p": 0.0,
             "presence_penalty": 0.0,
             "repetition_penalty": 1.0,
-            # Thinking is Qwen's default; stated explicitly so it never silently changes.
-            "chat_template_kwargs": {"enable_thinking": True},
+            # Thinking on, at the card's "medium" effort (the default "xhigh" ran 6-20k tokens per
+            # decision). preserve_thinking stays at the card's default (on): earlier thinking
+            # stays in the conversation.
+            "chat_template_kwargs": {"enable_thinking": True, "reasoning_effort": "medium"},
         },
     ),
     # Second model family, served by vLLM on HPRC; used only if it passes the tool-call check.

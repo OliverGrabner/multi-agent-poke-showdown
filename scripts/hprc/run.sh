@@ -53,7 +53,7 @@ nvidia-smi > "runs/vllm-${SLURM_JOB_ID}-gpus.txt"
   --model "$repo" --served-model-name "$repo" \
   --host 127.0.0.1 --port "$port" \
   --dtype bfloat16 --tensor-parallel-size "$gpus" \
-  --max-model-len 131072 --max-num-seqs 64 --gpu-memory-utilization 0.95 \
+  --max-model-len 262144 --max-num-seqs 64 --gpu-memory-utilization 0.95 \
   --language-model-only --generation-config vllm "${parsers[@]}" \
   > "runs/vllm-${SLURM_JOB_ID}.log" 2>&1 &
 server=$!
