@@ -15,6 +15,7 @@ are on the field at once.
 - Everyone acts at the same time each turn; the game then resolves all actions.
 - A move can target either opponent or your partner. Some moves hit several Pokémon at once, and \
 some of those also hit your partner. Each option says what it hits.
+- If the opponent a move targets has already fainted, the move hits the other opponent instead.
 - When your active Pokémon faints you choose a replacement before the next turn.
 - Terastallization is not allowed in this battle.
 
@@ -88,6 +89,7 @@ field at once.
 - Everyone acts at the same time each turn; the game then resolves all actions.
 - A move can target either opponent or the other Pokémon on your side. Some moves hit several \
 Pokémon at once, and some of those also hit your other Pokémon. Each option says what it hits.
+- If the opponent a move targets has already fainted, the move hits the other opponent instead.
 - When an active Pokémon on your side faints you choose its replacement before the next turn.
 - Terastallization is not allowed in this battle.
 
