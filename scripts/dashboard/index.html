@@ -2,91 +2,130 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Qwen teammates: results</title>
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
 <style>
-body { font-family: Georgia, "Times New Roman", serif; max-width: 980px; margin: 24px auto; padding: 0 16px; color: #111; background: #fff; line-height: 1.45; }
-h1 { font-size: 24px; margin: 0 0 4px; }
-h2 { font-size: 18px; margin: 32px 0 6px; border-bottom: 1px solid #999; }
-h3 { font-size: 15px; margin: 16px 0 4px; }
-p.note { color: #555; font-size: 13px; margin: 4px 0 8px; }
-table { border-collapse: collapse; font-size: 13px; margin: 6px 0; }
-th, td { border: 1px solid #bbb; padding: 3px 8px; text-align: right; vertical-align: middle; }
-th { background: #eee; font-weight: normal; }
-td.l, th.l { text-align: left; }
-.num, td { font-family: Consolas, "Courier New", monospace; }
-td.l { font-family: Georgia, serif; }
-.bar { position: relative; width: 300px; height: 12px; background: #f0f0f0; }
-.bar .fill { position: absolute; top: 0; bottom: 0; left: 0; background: #555; }
-.bar .ci { position: absolute; top: 5px; height: 2px; background: #000; }
-.bar .dot { position: absolute; top: 1px; width: 10px; height: 10px; margin-left: -5px; background: #000; border-radius: 50%; }
-.bar .half { position: absolute; top: -2px; bottom: -2px; left: 50%; border-left: 1px dashed #888; }
-.stack { display: flex; width: 300px; height: 14px; }
-.stack div { height: 100%; }
-.c { background: #1f4fa3; } .x { background: #c0502a; } .n1 { background: #999; } .n2 { background: #ddd; }
-.sw { display: inline-block; width: 10px; height: 10px; vertical-align: middle; margin: 0 3px 0 10px; }
-svg text { font-family: Consolas, monospace; font-size: 11px; }
-#explorer { display: flex; gap: 16px; align-items: flex-start; }
-#list { width: 230px; flex: none; max-height: 600px; overflow-y: auto; border: 1px solid #bbb; font-family: Consolas, monospace; font-size: 12px; }
-#list div { padding: 2px 6px; cursor: pointer; border-bottom: 1px solid #eee; }
-#list div:hover { background: #eef; }
-#list div.sel { background: #dde; }
-#detail { flex: 1; min-width: 0; max-height: 600px; overflow-y: auto; border: 1px solid #bbb; padding: 6px 10px; font-size: 14px; }
-.turn { border-top: 1px solid #ccc; margin-top: 8px; padding-top: 4px; }
-.turn b.t { font-size: 12px; color: #555; }
-.say { margin: 4px 0; white-space: pre-wrap; }
-.choose { font-family: Consolas, monospace; font-size: 12px; color: #333; }
-.blue { color: #1f4fa3; font-weight: bold; } .red { color: #b0281a; font-weight: bold; }
-@media (max-width: 700px) { #explorer { flex-direction: column; } #list { width: 100%; } }
+:root {
+  --ink: #1b1f24; --ink2: #57606a; --ink3: #8c959f; --rule: #d8dee4; --bg: #f6f8fa; --card: #fff;
+  --blue: #1f4e9c; --red: #b42318;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 1180px; margin: 0 auto; padding: 28px 20px 60px; }
+h1 { font-size: 26px; margin: 0 0 4px; }
+h2 { font-size: 19px; margin: 36px 0 4px; padding-bottom: 4px; border-bottom: 2px solid var(--ink); }
+.meta { color: var(--ink2); font-size: 13px; }
+.lead { color: var(--ink2); margin: 4px 0 12px; max-width: 80ch; }
+.findings { background: var(--card); border: 1px solid var(--rule); border-left: 4px solid var(--blue); padding: 12px 18px; margin: 18px 0; }
+.findings h3 { margin: 0 0 6px; font-size: 14px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink2); }
+.findings ul { margin: 0; padding-left: 18px; }
+.findings li { margin: 3px 0; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 16px 0; }
+.card { background: var(--card); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; }
+.card .k { font-size: 12px; color: var(--ink2); text-transform: uppercase; letter-spacing: .04em; }
+.card .v { font: 600 26px/1.2 ui-monospace, Consolas, monospace; margin: 4px 0 2px; }
+.card .s { font-size: 12px; color: var(--ink3); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 16px; }
+@media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+figure { margin: 0; background: var(--card); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; min-width: 0; }
+figcaption { font-size: 13px; color: var(--ink2); margin-top: 6px; }
+figcaption b { color: var(--ink); }
+.plot { width: 100%; height: 340px; }
+.tablewrap { overflow-x: auto; background: var(--card); border: 1px solid var(--rule); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 6px 10px; border-bottom: 1px solid var(--rule); text-align: right; white-space: nowrap; }
+th { background: #eef1f4; font-weight: 600; color: var(--ink2); }
+td { font-family: ui-monospace, Consolas, monospace; }
+th:first-child, td:first-child { text-align: left; font-family: inherit; }
+.dotc { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+/* Battle reader */
+.controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 8px 0; font-size: 14px; }
+select { font: inherit; padding: 4px 8px; border: 1px solid var(--rule); border-radius: 4px; background: #fff; }
+.reader { display: grid; grid-template-columns: 250px 1fr; gap: 12px; }
+@media (max-width: 760px) { .reader { grid-template-columns: 1fr; } }
+#list { background: var(--card); border: 1px solid var(--rule); border-radius: 6px; max-height: 680px; overflow-y: auto; }
+#list button { all: unset; box-sizing: border-box; display: flex; justify-content: space-between; gap: 6px; width: 100%; padding: 6px 10px; border-bottom: 1px solid #eef1f4; cursor: pointer; font: 12px ui-monospace, Consolas, monospace; }
+#list button:hover { background: #f0f4fa; }
+#list button.sel { background: #dde8f7; }
+#list button:focus-visible { outline: 2px solid var(--blue); }
+.tag { padding: 0 6px; border-radius: 3px; font-size: 11px; }
+.tag.bw { background: #dbe7fb; color: var(--blue); }
+.tag.rw { background: #fde2df; color: var(--red); }
+#detail { background: var(--card); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 16px; max-height: 680px; overflow-y: auto; min-width: 0; }
+.bhead { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink2); padding-bottom: 8px; border-bottom: 1px solid var(--rule); }
+.bhead b { color: var(--ink); }
+.turn { padding: 10px 0; border-bottom: 1px dashed var(--rule); }
+.turn .th { font: 600 12px ui-monospace, Consolas, monospace; color: var(--ink3); margin-bottom: 6px; }
+.msg { margin: 6px 0; padding: 7px 10px; border-radius: 6px; max-width: 90ch; white-space: pre-wrap; font-size: 14px; }
+.msg.blue { background: #eef4fd; border-left: 3px solid var(--blue); }
+.msg.red { background: #fdf0ee; border-left: 3px solid var(--red); }
+.msg .who { display: block; font-weight: 700; font-size: 12px; margin-bottom: 2px; }
+.blue .who, .cb { color: var(--blue); } .red .who, .cr { color: var(--red); }
+.choice { font: 12px ui-monospace, Consolas, monospace; color: var(--ink2); margin: 2px 0; }
+.choice b { font-weight: 700; }
 </style>
 </head>
 <body>
+<main>
 <h1>Does talking make LLM teammates win more?</h1>
-<p class="note">Pokémon Showdown Multi Battles, Gen 9 random teams. Qwen3.8-27B (reasoning effort medium) on side p1+p3.
-Every condition plays the same 25 team draws twice with sides swapped. Built <span id="built"></span> from <span id="nb"></span> finished battles.</p>
+<div class="meta">Pokémon Showdown Multi Battles · Gen 9 random teams · Qwen3.8-27B, reasoning effort medium · built <span id="built"></span> from <span id="nb"></span> finished battles</div>
+<p class="lead">Two Qwen agents share a side (Blue: p1 + p3) and can talk privately before each turn. Every condition plays the same 25 team draws twice with the sides swapped, so differences come from how the team plays, not the draw.</p>
 
-<h2>1. Win rate against the max-power bot</h2>
-<p class="note">Dot = win rate, line = 95% Wilson interval, dashed = 50%. Crashed battles (server timeouts) are excluded.</p>
-<table id="winrates"></table>
+<div class="cards" id="cards"></div>
+<div class="findings"><h3>What the data says</h3><ul id="findings"></ul></div>
 
-<h2>2. Same teams, battle by battle (free talk vs each other condition)</h2>
-<p class="note">Battles played by both conditions on the same seed and side.
-<span class="sw c"></span>only free talk won <span class="sw n1"></span>both won <span class="sw n2"></span>both lost <span class="sw x"></span>only the other won.
-p = exact two-sided McNemar test on the discordant battles.</p>
-<table id="paired"></table>
+<h2>1. Results</h2>
+<div class="grid">
+  <figure><div class="plot" id="f-win"></div><figcaption><b>Figure 1.</b> Win rate against the max-power bot, with 95% Wilson intervals. Dashed line: 50%. Crashed battles (server timeouts) are excluded.</figcaption></figure>
+  <figure><div class="plot" id="f-paired"></div><figcaption><b>Figure 2.</b> Same teams, battle by battle: free talk vs each other condition. p = exact two-sided McNemar test on the battles only one of them won.</figcaption></figure>
+  <figure><div class="plot" id="f-h2h"></div><figcaption><b>Figure 3.</b> Head to head (both teams Qwen). Each team draw is played twice with sides swapped; bars count the draws where both battles finished.</figcaption></figure>
+  <figure><div class="plot" id="f-scatter"></div><figcaption><b>Figure 4.</b> Win rate vs output tokens per battle (thinking + messages). Talking teams also think more, so part of the gain may come from extra thinking.</figcaption></figure>
+</div>
 
-<h2>3. Head to head</h2>
-<p class="note">Both teams Qwen. A "draw pair" is one team draw played twice with sides swapped; only pairs where both battles finished are counted.</p>
-<table id="h2h"></table>
+<h2>2. How the teams play</h2>
+<div class="grid">
+  <figure><div class="plot" id="f-style"></div><figcaption><b>Figure 5.</b> Focus fire = both attacked the same foe, out of turns where both attacked a foe. Protect and speed control (Tailwind, Trick Room, Icy Wind, Thunder Wave, …) = used, out of choices where one was available. Switches = out of all choices.</figcaption></figure>
+  <figure><div class="plot" id="f-kos"></div><figcaption><b>Figure 6.</b> Foes knocked out per turn when both teammates attacked, split by whether they focused one foe or split targets.</figcaption></figure>
+  <figure><div class="plot" id="f-turns"></div><figcaption><b>Figure 7.</b> Battle length in turns, won vs lost battles.</figcaption></figure>
+  <figure><div class="plot" id="f-tokens"></div><figcaption><b>Figure 8.</b> Output tokens per battle for each team (thinking + messages).</figcaption></figure>
+</div>
 
-<h2>4. Win rate vs tokens generated</h2>
-<p class="note">Output tokens per battle (thinking + messages), Qwen side only. Talking teams also think more, so part of the gain may come from extra thinking.</p>
-<div id="scatter"></div>
+<h2>3. Talk</h2>
+<div class="grid">
+  <figure><div class="plot" id="f-msgs"></div><figcaption><b>Figure 9.</b> Messages per round (one round = one decision point), share of rounds.</figcaption></figure>
+  <figure><div class="plot" id="f-words"></div><figcaption><b>Figure 10.</b> Words per message.</figcaption></figure>
+</div>
+<h3 style="margin:18px 0 6px;font-size:15px">Talk and cost per team</h3>
+<div class="tablewrap"><table id="usage"></table></div>
 
-<h2>5. How the teams play</h2>
-<p class="note">Focus fire = both attacked the same foe, out of turns where both attacked a foe. Protect / speed control = used, out of choices where such a move was available
-(Protect, Detect, Spiky Shield, ...; Tailwind, Trick Room, Icy Wind, Thunder Wave, ...). Switches = out of all choices.
-KOs/turn = foes fainted per turn when both attacked, split by focus vs split.</p>
-<table id="style"></table>
-
-<h2>6. Talk and cost per team</h2>
-<table id="usage"></table>
-
-<h2>7. Read a battle</h2>
-<p class="note">Messages and choices, turn by turn. Blue = p1+p3 (the Qwen team; in head to head, the talking team). "m" = same draw with sides swapped.</p>
-<p>Run: <select id="run"></select></p>
-<div id="explorer"><div id="list"></div><div id="detail"></div></div>
+<h2>4. Read a battle</h2>
+<p class="lead">Every message and choice, turn by turn. "m" after a number = the same team draw with sides swapped.</p>
+<div class="controls">
+  <label>Run <select id="run"></select></label>
+  <label>Show <select id="filter"><option value="all">all battles</option><option value="p1p3">Blue won</option><option value="p2p4">Red won</option></select></label>
+  <span id="count" class="meta"></span>
+</div>
+<div class="reader"><div id="list"></div><div id="detail"></div></div>
+</main>
 
 <script>
 const DATA = __DATA__;
+const conds = DATA.conditions, h2h = DATA.head_to_head;
+const COLOR = { A: "#e8743b", B: "#d4a017", C: "#2a78d6", D: "#19a979", h2hBlue: "#1f4e9c", h2hRed: "#b42318" };
 const pct = (x, d = 0) => (x * 100).toFixed(d) + "%";
-const k = (x) => x >= 1e6 ? (x / 1e6).toFixed(2) + "M" : x >= 1e3 ? (x / 1e3).toFixed(1) + "k" : String(x);
+const kfmt = (x) => x >= 1e6 ? (x / 1e6).toFixed(2) + "M" : x >= 1e3 ? (x / 1e3).toFixed(1) + "k" : String(x);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
 const short = (p) => p.split(" - ")[0];
-const conds = DATA.conditions;
-const h2h = DATA.head_to_head;
-
-document.getElementById("built").textContent = DATA.built;
-document.getElementById("nb").textContent = DATA.battles.length;
+const byLetter = Object.fromEntries(conds.map((c) => [c.letter, c]));
+const base = {
+  font: { family: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif", size: 12, color: "#1b1f24" },
+  margin: { l: 200, r: 20, t: 10, b: 40 }, paper_bgcolor: "#fff", plot_bgcolor: "#fff",
+  hoverlabel: { font: { family: "ui-monospace, Consolas, monospace" } },
+};
+const cfg = { displaylogo: false, responsive: true, modeBarButtonsToRemove: ["lasso2d", "select2d"] };
+const plot = (id, traces, layout) => Plotly.newPlot(id, traces, { ...base, ...layout }, cfg);
 
 function mcnemar(b, c) {
   const n = b + c, m = Math.min(b, c);
@@ -96,104 +135,191 @@ function mcnemar(b, c) {
   return Math.min(1, 2 * tail / 2 ** n);
 }
 
-// 1. Win rates
-document.getElementById("winrates").innerHTML =
-  "<tr><th class=l>Condition</th><th>Won</th><th>Battles</th><th>Win rate</th><th>95% CI</th><th>Crashed</th><th>Mean turns</th><th class=l>0% to 100%</th></tr>" +
-  conds.map((c) => `<tr><td class=l>${c.letter}. ${esc(c.label)}</td><td>${c.wins}</td><td>${c.battles}</td><td>${pct(c.rate, 1)}</td>
-    <td>${pct(c.ci[0])}–${pct(c.ci[1])}</td><td>${c.crashes}</td><td>${(c.turns.reduce((a, b) => a + b, 0) / c.turns.length).toFixed(1)}</td>
-    <td class=l><div class=bar title="${c.wins}/${c.battles}"><div class=half></div><div class=ci style="left:${c.ci[0] * 100}%;width:${(c.ci[1] - c.ci[0]) * 100}%"></div><div class=dot style="left:${c.rate * 100}%"></div></div></td></tr>`).join("");
+// Teams: the four conditions against the bot, then each side of each head-to-head match.
+const teams = conds.map((c) => ({ name: `${c.letter}. ${c.label}`, color: COLOR[c.letter], style: c.style, usage: c.usage, run: c.run, side: "p1p3" }));
+h2h.forEach((m) => m.labels.forEach((l, i) => teams.push({
+  name: `H2H ${l} (${i ? "Red" : "Blue"})`, color: i ? COLOR.h2hRed : COLOR.h2hBlue, style: m.style[i], usage: m.usage[i], run: m.run, side: i ? "p2p4" : "p1p3",
+})));
+const battlesOf = (t) => DATA.battles.filter((b) => b.run === t.run);
 
-// 2. Paired
-document.getElementById("paired").innerHTML =
-  "<tr><th class=l>Free talk vs</th><th>Shared</th><th>Only free talk won</th><th>Both won</th><th>Both lost</th><th>Only other won</th><th>p</th><th class=l></th></tr>" +
-  conds.filter((c) => c.vs_free_talk).map((c) => {
-    const p = c.vs_free_talk, n = p.shared;
-    const seg = (v, cls, t) => `<div class=${cls} style="width:${v / n * 100}%" title="${t}: ${v}"></div>`;
-    return `<tr><td class=l>${c.letter}. ${esc(c.label)}</td><td>${n}</td><td>${p.only_base}</td><td>${p.both}</td><td>${p.neither}</td><td>${p.only_other}</td>
-      <td>${mcnemar(p.only_base, p.only_other).toFixed(3)}</td>
-      <td class=l><div class=stack>${seg(p.only_base, "c", "only free talk")}${seg(p.both, "n1", "both")}${seg(p.neither, "n2", "neither")}${seg(p.only_other, "x", "only other")}</div></td></tr>`;
-  }).join("");
+document.getElementById("built").textContent = DATA.built;
+document.getElementById("nb").textContent = DATA.battles.length;
 
-// 3. Head to head
-document.getElementById("h2h").innerHTML =
-  "<tr><th class=l>Match (Blue vs Red)</th><th>Blue won</th><th>Battles</th><th>Blue win rate</th><th>95% CI</th><th>Crashed</th><th>Pairs complete</th><th>Blue won both</th><th>One each</th><th>Red won both</th></tr>" +
-  h2h.map((m) => `<tr><td class=l>${esc(m.labels[0])} vs ${esc(m.labels[1])}</td><td>${m.wins}</td><td>${m.battles}</td><td>${pct(m.rate, 1)}</td>
-    <td>${pct(m.ci[0])}–${pct(m.ci[1])}</td><td>${m.crashes}</td><td>${m.pairs.complete}</td><td>${m.pairs.a_both}</td><td>${m.pairs.split}</td><td>${m.pairs.b_both}</td></tr>`).join("");
-
-// 4. Scatter
+// Summary cards and findings
 (() => {
-  const W = 560, H = 280, L = 50, R = 20, T = 10, B = 40;
-  const xMax = Math.ceil(Math.max(...conds.map((c) => c.usage.output_tokens_per_battle)) / 10000) * 10000 + 5000;
-  const x = (v) => L + v / xMax * (W - L - R), y = (v) => T + (1 - v) * (H - T - B);
-  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="max-width:100%;height:auto">`;
-  for (const t of [0, .25, .5, .75, 1]) s += `<line x1=${L} x2=${W - R} y1=${y(t)} y2=${y(t)} stroke="#ddd" ${t === .5 ? 'stroke-dasharray="4 3" stroke="#888"' : ""}/><text x=${L - 6} y=${y(t) + 4} text-anchor=end>${t * 100}%</text>`;
-  for (let v = 0; v <= xMax; v += 10000) s += `<text x=${x(v)} y=${H - B + 16} text-anchor=middle>${v / 1000}k</text>`;
-  s += `<text x=${(L + W - R) / 2} y=${H - 6} text-anchor=middle>output tokens per battle</text>`;
-  for (const c of conds) {
-    const cx = x(c.usage.output_tokens_per_battle);
-    s += `<line x1=${cx} x2=${cx} y1=${y(c.ci[0])} y2=${y(c.ci[1])} stroke="#000"/><circle cx=${cx} cy=${y(c.rate)} r=4 fill="#000"><title>${esc(c.label)}: ${k(c.usage.output_tokens_per_battle)} tokens, ${pct(c.rate)}</title></circle>`;
-    s += `<text x=${cx + 8} y=${y(c.rate) + 4}>${c.letter}</text>`;
-  }
-  document.getElementById("scatter").innerHTML = s + "</svg>" +
-    `<p class=note>${conds.map((c) => `${c.letter} = ${esc(c.label)}`).join(", ")}.</p>`;
+  const A = byLetter.A, C = byLetter.C, m = h2h[0], p = A.vs_free_talk;
+  const planned = 50 * (conds.length + h2h.length);
+  const card = (k, v, s) => `<div class="card"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+  document.getElementById("cards").innerHTML =
+    card("Free talk vs no talk", `${pct(C.rate)} / ${pct(A.rate)}`, "win rate against the max-power bot") +
+    card("Same teams, battle by battle", `${p.only_base} : ${p.only_other}`, `battles only free talk / only no talk won (p = ${mcnemar(p.only_base, p.only_other).toFixed(3)})`) +
+    (m ? card("Head to head", pct(m.rate), `free talk won ${m.wins} of ${m.battles} against no talk`) : "") +
+    card("Battles finished", `${DATA.battles.length} / ${planned}`, `${conds.reduce((n, c) => n + c.crashes, 0) + h2h.reduce((n, x) => n + x.crashes, 0)} crashed (server timeouts)`);
+  const focus = (s) => s.focus_turns / (s.focus_turns + s.split_turns);
+  const prot = (s) => s.protect_used / s.protect_available;
+  document.getElementById("findings").innerHTML = [
+    `More talk, more wins against the bot: no talk ${pct(A.rate)}, one message ${pct(byLetter.B.rate)}, free talk ${pct(C.rate)}. One model controlling both Pokémon: ${pct(byLetter.D.rate)}.`,
+    m ? `Head to head, free talk beat no talk in ${pct(m.rate)} of battles; it won both battles of a team draw ${m.pairs.a_both} times, no talk ${m.pairs.b_both} times.` : "",
+    `Talking teams split targets: focus fire ${pct(focus(A.style))} without talk vs ${pct(focus(C.style))} with free talk and ${pct(focus(byLetter.B.style))} with one message.`,
+    `Talking teams use Protect more: ${pct(prot(C.style), 1)} of chances with free talk vs ${pct(prot(A.style), 1)} without talk.`,
+    `Talk costs compute: free talk generates ${kfmt(C.usage.output_tokens_per_battle)} output tokens per battle vs ${kfmt(A.usage.output_tokens_per_battle)} without talk (Figure 4).`,
+  ].filter(Boolean).map((x) => `<li>${x}</li>`).join("");
 })();
 
-// 5. Play style
-const teams = conds.map((c) => ({ name: `${c.letter}. ${c.label}`, s: c.style }));
-h2h.forEach((m) => m.labels.forEach((l, i) => teams.push({ name: `${l} (head to head, ${i ? "Red" : "Blue"})`, s: m.style[i] })));
-const frac = (a, b) => b ? `${pct(a / b)} <span style="color:#777">(${a}/${b})</span>` : "–";
-document.getElementById("style").innerHTML =
-  "<tr><th class=l>Team</th><th>Focus fire</th><th>Protect used</th><th>Speed control used</th><th>Switches</th><th>KOs/turn when focusing</th><th>KOs/turn when splitting</th></tr>" +
-  teams.map(({ name, s }) => {
-    const f = s.focus_turns || 0, sp = s.split_turns || 0;
-    return `<tr><td class=l>${esc(name)}</td><td>${frac(f, f + sp)}</td><td>${frac(s.protect_used || 0, s.protect_available || 0)}</td>
-      <td>${frac(s.speed_used || 0, s.speed_available || 0)}</td><td>${frac(s.switches || 0, s.decisions || 0)}</td>
-      <td>${f ? ((s.focus_kos || 0) / f).toFixed(2) : "–"}</td><td>${sp ? ((s.split_kos || 0) / sp).toFixed(2) : "–"}</td></tr>`;
-  }).join("");
+// Figure 1: win rates
+(() => {
+  const rows = [...conds].reverse();
+  plot("f-win", [{
+    type: "scatter", mode: "markers", y: rows.map((c) => `${c.letter}. ${c.label}`), x: rows.map((c) => c.rate),
+    error_x: { type: "data", symmetric: false, array: rows.map((c) => c.ci[1] - c.rate), arrayminus: rows.map((c) => c.rate - c.ci[0]), thickness: 2, width: 6, color: "#57606a" },
+    marker: { size: 13, color: rows.map((c) => COLOR[c.letter]) },
+    customdata: rows.map((c) => [c.wins, c.battles, pct(c.ci[0]), pct(c.ci[1])]),
+    hovertemplate: "%{y}<br>%{customdata[0]} of %{customdata[1]} won (%{x:.1%})<br>95% CI %{customdata[2]}–%{customdata[3]}<extra></extra>",
+  }], {
+    xaxis: { range: [0, 1], tickformat: ".0%", gridcolor: "#eef1f4", zeroline: false, title: "win rate" },
+    shapes: [{ type: "line", x0: .5, x1: .5, yref: "paper", y0: 0, y1: 1, line: { dash: "dash", color: "#8c959f", width: 1 } }],
+    showlegend: false,
+  });
+})();
 
-// 6. Usage
-const urows = conds.map((c) => [`${c.letter}. ${c.label}`, c.usage]);
-h2h.forEach((m) => m.labels.forEach((l, i) => urows.push([`${l} (head to head)`, m.usage[i]])));
+// Figure 2: paired outcomes
+(() => {
+  const rows = conds.filter((c) => c.vs_free_talk).reverse();
+  const y = rows.map((c) => `vs ${c.letter}. ${c.label}<br><span style="font-size:10px">p = ${mcnemar(c.vs_free_talk.only_base, c.vs_free_talk.only_other).toFixed(3)}</span>`);
+  const seg = (name, key, color) => ({
+    type: "bar", orientation: "h", name, y, x: rows.map((c) => c.vs_free_talk[key]), marker: { color, line: { color: "#fff", width: 1 } },
+    text: rows.map((c) => c.vs_free_talk[key]), textposition: "inside", insidetextanchor: "middle",
+    hovertemplate: `${name}: %{x}<extra></extra>`,
+  });
+  plot("f-paired", [
+    seg("Only free talk won", "only_base", COLOR.C), seg("Both won", "both", "#aab4bf"),
+    seg("Both lost", "neither", "#dfe4ea"), seg("Only the other won", "only_other", COLOR.A),
+  ], { barmode: "stack", xaxis: { title: "battles", gridcolor: "#eef1f4" }, legend: { orientation: "h", y: -0.2 }, margin: { ...base.margin, b: 70 } });
+})();
+
+// Figure 3: head to head
+(() => {
+  if (!h2h.length) return;
+  const y = h2h.map((m) => `${m.labels[0]} vs ${m.labels[1]}<br><span style="font-size:10px">${m.wins}/${m.battles} battles won by ${m.labels[0]}</span>`);
+  const seg = (name, key, color) => ({
+    type: "bar", orientation: "h", name, y, x: h2h.map((m) => m.pairs[key]), marker: { color, line: { color: "#fff", width: 1 } },
+    text: h2h.map((m) => m.pairs[key]), textposition: "inside", hovertemplate: `${name}: %{x} draws<extra></extra>`,
+  });
+  plot("f-h2h", [
+    seg(`${h2h[0].labels[0]} won both`, "a_both", COLOR.h2hBlue), seg("One each", "split", "#aab4bf"), seg(`${h2h[0].labels[1]} won both`, "b_both", COLOR.h2hRed),
+  ], { barmode: "stack", xaxis: { title: "team draws (both battles finished)", gridcolor: "#eef1f4" }, legend: { orientation: "h", y: -0.3 }, margin: { ...base.margin, b: 80 } });
+})();
+
+// Figure 4: win rate vs tokens
+plot("f-scatter", conds.map((c) => ({
+  type: "scatter", mode: "markers+text", name: `${c.letter}. ${c.label}`,
+  x: [c.usage.output_tokens_per_battle], y: [c.rate], text: [c.letter], textposition: "middle right", textfont: { size: 13, color: COLOR[c.letter] },
+  error_y: { type: "data", symmetric: false, array: [c.ci[1] - c.rate], arrayminus: [c.rate - c.ci[0]], color: COLOR[c.letter], thickness: 1.5, width: 4 },
+  marker: { size: 12, color: COLOR[c.letter] },
+  hovertemplate: `${c.label}<br>%{x:,.0f} output tokens per battle<br>win rate %{y:.1%}<extra></extra>`,
+})), {
+  margin: { l: 55, r: 20, t: 10, b: 45 }, xaxis: { title: "output tokens per battle", rangemode: "tozero", gridcolor: "#eef1f4" },
+  yaxis: { range: [0, 1], tickformat: ".0%", gridcolor: "#eef1f4", title: "win rate" }, legend: { x: 0.01, y: 0.02, bgcolor: "rgba(255,255,255,.8)" },
+});
+
+// Figure 5: play style
+(() => {
+  const metrics = [
+    ["Focus fire", (s) => [s.focus_turns || 0, (s.focus_turns || 0) + (s.split_turns || 0)]],
+    ["Protect", (s) => [s.protect_used || 0, s.protect_available || 0]],
+    ["Speed control", (s) => [s.speed_used || 0, s.speed_available || 0]],
+    ["Switches", (s) => [s.switches || 0, s.decisions || 0]],
+  ];
+  plot("f-style", teams.map((t) => {
+    const nd = metrics.map(([, f]) => f(t.style));
+    return {
+      type: "bar", name: t.name, x: metrics.map(([m]) => m), y: nd.map(([n, d]) => d ? n / d : 0), marker: { color: t.color },
+      customdata: nd, hovertemplate: `${t.name}<br>%{x}: %{y:.0%} (%{customdata[0]}/%{customdata[1]})<extra></extra>`,
+    };
+  }), { barmode: "group", margin: { l: 50, r: 10, t: 10, b: 30 }, yaxis: { tickformat: ".0%", gridcolor: "#eef1f4" }, legend: { font: { size: 11 } } });
+})();
+
+// Figure 6: KOs per attacking turn
+plot("f-kos", ["focus", "split"].map((kind) => ({
+  type: "bar", name: kind === "focus" ? "Focused one foe" : "Split targets", x: teams.map((t) => t.name),
+  y: teams.map((t) => (t.style[`${kind}_kos`] || 0) / (t.style[`${kind}_turns`] || 1)),
+  customdata: teams.map((t) => [t.style[`${kind}_kos`] || 0, t.style[`${kind}_turns`] || 0]),
+  marker: { color: kind === "focus" ? "#3d4b5c" : "#aab4bf" },
+  hovertemplate: "%{x}<br>%{y:.2f} KOs per turn (%{customdata[0]} KOs in %{customdata[1]} turns)<extra></extra>",
+})), { barmode: "group", margin: { l: 50, r: 10, t: 10, b: 90 }, yaxis: { title: "foes KO'd per turn", gridcolor: "#eef1f4" }, xaxis: { tickangle: -25 }, legend: { orientation: "h", y: 1.1 } });
+
+// Figure 7: battle length, won vs lost
+plot("f-turns", ["p1p3", "p2p4"].map((winner) => {
+  const xs = [], ys = [];
+  for (const t of teams) for (const b of battlesOf(t)) if ((b.winner === t.side) === (winner === "p1p3")) { xs.push(t.name); ys.push(b.turns); }
+  return { type: "box", name: winner === "p1p3" ? "Team won" : "Team lost", x: xs, y: ys, boxpoints: "all", jitter: .4, pointpos: 0, marker: { size: 4, color: winner === "p1p3" ? "#2f7d32" : "#8c959f" }, line: { width: 1.5 } };
+}), { boxmode: "group", margin: { l: 50, r: 10, t: 10, b: 90 }, yaxis: { title: "turns", gridcolor: "#eef1f4" }, xaxis: { tickangle: -25 }, legend: { orientation: "h", y: 1.1 } });
+
+// Figure 8: tokens per battle
+plot("f-tokens", teams.map((t) => ({
+  type: "box", name: t.name, y: battlesOf(t).map((b) => b.sides[t.side].output_tokens), marker: { color: t.color, size: 4 },
+  boxpoints: "all", jitter: .4, pointpos: 0, hovertemplate: "%{y:,.0f} tokens<extra></extra>",
+})), { showlegend: false, margin: { l: 60, r: 10, t: 10, b: 90 }, yaxis: { title: "output tokens per battle", gridcolor: "#eef1f4" }, xaxis: { tickangle: -25 } });
+
+// Figure 9 and 10: talk volume
+const talkers = teams.filter((t) => t.usage.messages_per_round);
+plot("f-msgs", talkers.map((t) => {
+  const counts = battlesOf(t).flatMap((b) => b.sides[t.side].messages_per_round);
+  const bins = ["0", "1", "2", "3", "4", "5+"];
+  const tally = bins.map((_, i) => counts.filter((n) => i === 5 ? n >= 5 : n === i).length);
+  return { type: "bar", name: t.name, x: bins, y: tally.map((n) => n / counts.length), marker: { color: t.color },
+    customdata: tally, hovertemplate: `${t.name}<br>%{x} messages: %{y:.0%} of rounds (%{customdata})<extra></extra>` };
+}), { barmode: "group", margin: { l: 50, r: 10, t: 10, b: 40 }, xaxis: { title: "messages in the round", type: "category" }, yaxis: { tickformat: ".0%", gridcolor: "#eef1f4" }, legend: { x: .55, y: .95 } });
+plot("f-words", talkers.map((t) => ({
+  type: "box", name: t.name, y: battlesOf(t).flatMap((b) => b.sides[t.side].words), marker: { color: t.color, size: 3 },
+  boxpoints: "outliers", hovertemplate: "%{y} words<extra></extra>",
+})), { showlegend: false, margin: { l: 60, r: 10, t: 10, b: 60 }, yaxis: { title: "words per message", gridcolor: "#eef1f4" } });
+
+// Usage table
 document.getElementById("usage").innerHTML =
-  "<tr><th class=l>Team</th><th>Rounds/battle</th><th>Messages/round</th><th>Words/message</th><th>Calls/battle</th><th>Prompt tok/battle</th><th>Output tok/battle</th><th>Valid replies</th><th>Fallbacks</th><th>Hit msg limit</th></tr>" +
-  urows.map(([n, u]) => `<tr><td class=l>${esc(n)}</td><td>${u.rounds_per_battle}</td><td>${u.messages_per_round ?? "–"}</td><td>${u.words_per_message ?? "–"}</td>
-    <td>${u.model_calls_per_battle}</td><td>${k(u.prompt_tokens_per_battle)}</td><td>${k(u.output_tokens_per_battle)}</td><td>${pct(u.valid_reply_rate, 1)}</td>
-    <td>${u.fallback_choices ?? 0}</td><td>${u.rounds_hitting_message_ceiling}</td></tr>`).join("");
+  "<tr><th>Team</th><th>Battles</th><th>Rounds/battle</th><th>Messages/round</th><th>Words/message</th><th>Model calls/battle</th><th>Prompt tokens/battle</th><th>Output tokens/battle</th><th>Valid replies</th><th>Fallbacks</th><th>Hit message limit</th></tr>" +
+  teams.map((t) => { const u = t.usage; return `<tr><td><span class="dotc" style="background:${t.color}"></span>${esc(t.name)}</td><td>${u.battles}</td><td>${u.rounds_per_battle}</td>
+    <td>${u.messages_per_round ?? "–"}</td><td>${u.words_per_message ?? "–"}</td><td>${u.model_calls_per_battle}</td><td>${kfmt(u.prompt_tokens_per_battle)}</td>
+    <td>${kfmt(u.output_tokens_per_battle)}</td><td>${pct(u.valid_reply_rate, 1)}</td><td>${u.fallback_choices ?? 0}</td><td>${u.rounds_hitting_message_ceiling}</td></tr>`; }).join("");
 
-// 7. Explorer
-const runSel = document.getElementById("run");
-const runNames = [...conds.map((c) => [c.run, `${c.letter}. ${c.label} vs max-power`]), ...h2h.map((m) => [m.run, `Head to head: ${m.labels.join(" vs ")}`])];
-runSel.innerHTML = runNames.map(([v, t]) => `<option value="${v}">${esc(t)}</option>`).join("");
+// Battle reader
+const runSel = document.getElementById("run"), filterSel = document.getElementById("filter");
+runSel.innerHTML = [...conds.map((c) => [c.run, `${c.letter}. ${c.label} vs max-power`]), ...h2h.map((m) => [m.run, `Head to head: ${m.labels[0]} (Blue) vs ${m.labels[1]} (Red)`])]
+  .map(([v, t]) => `<option value="${v}">${esc(t)}</option>`).join("");
 runSel.value = "base-free";
+const team = (seat) => seat === "p1" || seat === "p3" ? "blue" : "red";
 function show(b) {
   const turns = new Map();
   for (const e of b.events) { if (!turns.has(e[0])) turns.set(e[0], []); turns.get(e[0]).push(e); }
-  const team = (seat) => seat === "p1" || seat === "p3" ? "blue" : "red";
-  let out = `<b>${esc(b.key)}</b> — ${b.winner === "p1p3" ? "Blue" : "Red"} won in ${b.turns} turns, ${b.minutes} min.<br>` +
-    `<span class=note>${Object.entries(b.players).map(([s, p]) => esc(p)).join(" · ")}</span>`;
+  const tokens = Object.entries(b.sides).map(([s, n]) => `${s === "p1p3" ? "Blue" : "Red"} ${kfmt(n.output_tokens)} output tokens`).join(", ");
+  let out = `<div class="bhead"><b>${esc(b.key)}</b><span class="${b.winner === "p1p3" ? "cb" : "cr"}"><b class="${b.winner === "p1p3" ? "cb" : "cr"}">${b.winner === "p1p3" ? "Blue" : "Red"} won</b></span>
+    <span>${b.turns} turns</span><span>${b.minutes} min</span><span>${tokens}</span><span>${Object.values(b.players).map(esc).join(" · ")}</span></div>`;
   for (const [t, evs] of turns) {
-    out += `<div class=turn><b class=t>Turn ${t}</b>`;
+    out += `<div class="turn"><div class="th">TURN ${t}</div>`;
     for (const e of evs) out += e[2] === "say"
-      ? `<div class=say><span class=${team(e[1])}>${esc(short(b.players[e[1]]))}:</span> ${esc(e[3])}</div>`
-      : `<div class=choose>&rarr; <span class=${team(e[1])}>${esc(short(b.players[e[1]]))}</span> chose ${esc(e[3])}</div>`;
+      ? `<div class="msg ${team(e[1])}"><span class="who">${esc(short(b.players[e[1]]))}</span>${esc(e[3])}</div>`
+      : `<div class="choice">&rarr; <b class="${team(e[1]) === "blue" ? "cb" : "cr"}">${esc(short(b.players[e[1]]))}</b> chose ${esc(e[3])}</div>`;
     out += "</div>";
   }
-  document.getElementById("detail").innerHTML = out;
-  document.getElementById("detail").scrollTop = 0;
+  const detail = document.getElementById("detail");
+  detail.innerHTML = out;
+  detail.scrollTop = 0;
 }
 function fill() {
-  const battles = DATA.battles.filter((b) => b.run === runSel.value);
   const list = document.getElementById("list");
+  const battles = DATA.battles.filter((b) => b.run === runSel.value && (filterSel.value === "all" || b.winner === filterSel.value));
+  document.getElementById("count").textContent = `${battles.length} battles`;
   list.innerHTML = "";
   battles.forEach((b, i) => {
-    const row = document.createElement("div");
-    row.textContent = `${b.key.replace(/^.*-/, "")}  ${b.winner === "p1p3" ? "Blue won" : "Red won "}  ${b.turns}t`;
-    row.onclick = () => { list.querySelectorAll(".sel").forEach((n) => n.classList.remove("sel")); row.classList.add("sel"); show(b); };
-    list.append(row);
-    if (i === 0) row.onclick();
+    const btn = document.createElement("button");
+    btn.innerHTML = `<span>#${esc(b.key.replace(/^.*-/, ""))}</span><span>${b.turns}t</span><span class="tag ${b.winner === "p1p3" ? "bw" : "rw"}">${b.winner === "p1p3" ? "Blue won" : "Red won"}</span>`;
+    btn.onclick = () => { list.querySelectorAll(".sel").forEach((n) => n.classList.remove("sel")); btn.classList.add("sel"); show(b); };
+    list.append(btn);
+    if (i === 0) btn.onclick();
   });
+  if (!battles.length) document.getElementById("detail").innerHTML = "<p class='meta'>No battles match.</p>";
 }
-runSel.onchange = fill;
+runSel.onchange = fill; filterSel.onchange = fill;
 fill();
 </script>
 </body>

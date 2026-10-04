@@ -18,6 +18,7 @@ from pathlib import Path
 from pokerl import FOES
 from pokerl.analysis import side_report
 from pokerl.llm_batch import read_records
+from pokerl.models import output_tokens
 from pokerl.runner import wilson
 
 # Runs against the max-power bot (side p1p3 is the Qwen team), then head-to-head runs.
@@ -87,6 +88,20 @@ def play_style(records: list[dict], side: str) -> dict:
     return dict(counts)
 
 
+def side_numbers(team: dict) -> dict:
+    """Tokens, messages per round and message lengths for one model-backed side of one battle."""
+    events = team["transcript"]
+    rounds = sorted({event["step"] for event in events if event["event"] == "observation"})
+    says = Counter(event["step"] for event in events if event["event"] == "say")
+    calls = [call for log in team["agent_logs"].values() for call in log["calls"]]
+    return {
+        "output_tokens": sum(output_tokens(call["usage"]) for call in calls),
+        "prompt_tokens": sum(call["usage"].get("prompt_tokens", 0) for call in calls),
+        "messages_per_round": [says.get(step, 0) for step in rounds],
+        "words": [len(event["text"].split()) for event in events if event["event"] == "say"],
+    }
+
+
 def battle_rows(records: list[dict], run: str, sides: tuple[str, ...]) -> list[dict]:
     """One row per finished battle, with the talk and choices of the model-backed sides."""
     rows = []
@@ -101,6 +116,7 @@ def battle_rows(records: list[dict], run: str, sides: tuple[str, ...]) -> list[d
                 "turns": record["turns"],
                 "minutes": round(record["seconds"] / 60, 1),
                 "players": record["players"],
+                "sides": {side: side_numbers(record["sides"][side]) for side in sides},
                 "events": [
                     [event["turn"], event["seat"], event["event"], event.get("text") or event["label"]]
                     for side in sides
