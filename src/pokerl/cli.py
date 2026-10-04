@@ -158,7 +158,8 @@ def cmd_llm(args: argparse.Namespace) -> None:
     load_env()
     out_dir = Path(args.out_dir) / args.label
     battles = out_dir / "battles.jsonl"
-    specs = make_specs(load_pool(args.pool), args.pairs, args.label, mirror=not args.no_mirror)
+    seeds = args.seeds or args.label
+    specs = make_specs(load_pool(args.pool), args.pairs, seeds, mirror=not args.no_mirror)
     keep_talking = not args.choosing_ends_talk
     records = run_llm_batch(
         specs, args.side_a, args.side_b, battles, args.mode_a, args.mode_b, keep_talking, args.workers
@@ -226,6 +227,7 @@ def main(argv: list[str] | None = None) -> None:
     llm.add_argument("--mode-a", default="free", choices=SIDE_MODES, help="condition for side a")
     llm.add_argument("--mode-b", default="free", choices=SIDE_MODES, help="condition for side b")
     llm.add_argument("--label", required=True, help="names the output folder and seeds the battles")
+    llm.add_argument("--seeds", help="seed the battles from this label instead (same teams across runs)")
     llm.add_argument("--pairs", type=int, default=1, help="seeds; each is played twice unless --no-mirror")
     llm.add_argument("--no-mirror", action="store_true")
     llm.add_argument("--workers", type=int, default=1, help="battles played at the same time")
