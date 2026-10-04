@@ -1,9 +1,9 @@
-"""Collect the numbers the results dashboard shows into one JSON file.
+"""Build the local results page: one HTML file with the numbers inlined, opened in a browser.
 
-    python scripts/dashboard/build_data.py RUNS_DIR OUT.json
+    python scripts/dashboard/build.py RUNS_DIR OUT.html
 
 RUNS_DIR holds one folder per run (battles.jsonl inside), named as in RUNS below. Everything is
-counted directly from the battle logs; rerun after new battles arrive and republish the page.
+counted directly from the battle logs; rerun after new battles arrive.
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ import json
 import re
 import sys
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 
 from pokerl import FOES
@@ -158,7 +159,8 @@ def mirror_pairs(records: list[dict]) -> dict:
 def main(runs_dir: Path, out_path: Path) -> None:
     runs = {name: read_records(runs_dir / name / "battles.jsonl") for name in RUNS}
     h2h = {name: read_records(runs_dir / name / "battles.jsonl") for name in HEAD_TO_HEAD}
-    data = {"conditions": [], "head_to_head": [], "battles": []}
+    built = datetime.now().strftime("%Y-%m-%d %H:%M")
+    data = {"built": built, "conditions": [], "head_to_head": [], "battles": []}
     for name, (letter, label) in RUNS.items():
         records = runs[name]
         data["conditions"].append(
@@ -186,7 +188,9 @@ def main(runs_dir: Path, out_path: Path) -> None:
             }
         )
         data["battles"] += battle_rows(records, name, ("p1p3", "p2p4"))
-    out_path.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    payload = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", r"<\/")
+    page = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
+    out_path.write_text(page.replace("__DATA__", payload), encoding="utf-8")
     print(f"Wrote {out_path} ({out_path.stat().st_size / 1e6:.1f} MB, {len(data['battles'])} battles)")
 
 
