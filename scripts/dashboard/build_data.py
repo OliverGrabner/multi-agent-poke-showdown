@@ -145,9 +145,7 @@ def mirror_pairs(records: list[dict]) -> dict:
     by_seed: dict[str, list[bool]] = {}
     for record in records:
         if "crash" not in record:
-            by_seed.setdefault(record["battle_key"].rstrip("m"), []).append(
-                record["winning_side"] == "p1p3"
-            )
+            by_seed.setdefault(record["battle_key"].rstrip("m"), []).append(record["winning_side"] == "p1p3")
     complete = [wins for wins in by_seed.values() if len(wins) == 2]
     return {
         "complete": len(complete),
