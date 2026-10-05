@@ -51,12 +51,12 @@ select { font: inherit; padding: 4px 8px; border: 1px solid var(--rule); border-
 <body>
 <main>
 <h1>Does talking make LLM teammates win more?</h1>
-<div class="meta">Pokémon Showdown Multi Battles · Gen 9 random teams · Qwen3.8-27B, reasoning effort medium · built <span id="built"></span></div>
+<div class="meta">Pokémon Showdown Multi Battles · Gen 9 · Qwen3.8-27B, reasoning effort medium unless stated · built <span id="built"></span></div>
 <p class="lead">Two Qwen agents play as teammates, one Pokémon each. We vary how much they may talk before each turn and measure how often their team wins.
 Every condition plays the same 25 team draws twice with the sides swapped, so the conditions face exactly the same battles.</p>
 <div class="key"><ul id="key"></ul></div>
 
-<h2>Win rate</h2>
+<h2>Random teams: win rate</h2>
 <div class="figs">
   <figure><div class="plot" id="f-bot"></div>
     <figcaption>Each bar is one Qwen team setup playing against the max-power bot (always uses its strongest move). Whiskers: 95% confidence interval. Dashed line: 50%.</figcaption></figure>
@@ -64,13 +64,26 @@ Every condition plays the same 25 team draws twice with the sides swapped, so th
     <figcaption>Both teams are Qwen, playing each other: a free-talk team against a no-talk team. The two bars add up to 100%.</figcaption></figure>
 </div>
 
-<h2>Numbers per condition (against the max-power bot)</h2>
+<h2>Random teams: numbers per condition (against the max-power bot)</h2>
 <div class="tablewrap"><table id="table"></table></div>
 <p class="note">"Same battles, only one side won": of the battles both this condition and free talk played (same teams, same seed), how many only free talk won and how many only this condition won; p is an exact McNemar test.
 Output tokens include thinking. Crashed battles (model-server timeouts) are left out.</p>
 
+<h2>Strategy teams (mirror matches)</h2>
+<p class="lead">Four prebuilt level-50 doubles teams (Trick Room, Tailwind, Rain, Sun), each split so its combo needs both partners:
+one player has the setter, the other has the Pokémon that need it. Both sides get the same team (a mirror match), so neither side has the better team.
+48 battles per run, 12 per team.</p>
+<div class="figs">
+  <figure><div class="plot" id="f-compare"></div>
+    <figcaption>Win rate of the free-talk team, on random teams and on strategy teams. Whiskers: 95% confidence interval. Dashed line: 50%.</figcaption></figure>
+  <figure><div class="plot" id="f-think"></div>
+    <figcaption>Strategy teams, both teams Qwen with free talk: thinking switched off against low reasoning effort. The two bars add up to 100%.</figcaption></figure>
+</div>
+<div class="tablewrap" style="margin-top:16px"><table id="strat-table"></table></div>
+<p class="note">Wins by team are the first side's wins with that team (both sides play it). Crashed battles (model-server timeouts) are left out.</p>
+
 <h2>Read a battle</h2>
-<p class="lead">Every message and choice, turn by turn. Blue is the Qwen team (in the head-to-head run, Blue talks and Red does not). An "m" after the number is the same team draw with sides swapped.</p>
+<p class="lead">Every message and choice, turn by turn. Blue is p1 + p3, Red is p2 + p4; the run name says who is who. An "m" after the number is the same team draw with sides swapped.</p>
 <div class="controls">
   <label>Run <select id="run"></select></label>
   <label>Show <select id="filter"><option value="all">all battles</option><option value="p1p3">Blue won</option><option value="p2p4">Red won</option></select></label>
@@ -81,7 +94,9 @@ Output tokens include thinking. Crashed battles (model-server timeouts) are left
 
 <script>
 const DATA = __DATA__;
-const conds = DATA.conditions, h2h = DATA.head_to_head;
+const conds = DATA.conditions, matches = DATA.matches;
+const h2h = matches.filter((m) => m.teams === "random");
+const strat = Object.fromEntries(matches.filter((m) => m.teams === "strategy").map((m) => [m.run, m]));
 const by = Object.fromEntries(conds.map((c) => [c.run, c]));
 const pct = (x, d = 0) => (x * 100).toFixed(d) + "%";
 const kfmt = (x) => x >= 1e3 ? (x / 1e3).toFixed(1) + "k" : String(x);
@@ -126,8 +141,16 @@ function winBars(id, title, bars) {
     `On the same battles, free talk won ${p.only_base} that no talk lost, and no talk won ${p.only_other} that free talk lost (p = ${mcnemar(p.only_base, p.only_other).toFixed(3)}).`,
     m ? `Playing each other, the free-talk team beat the no-talk team in <b>${pct(m.sides[0].rate)}</b> of ${m.sides[0].battles} battles.` : "",
     `Talking costs compute: free talk generates ${kfmt(C.usage.output_tokens_per_battle)} output tokens per battle, no talk ${kfmt(A.usage.output_tokens_per_battle)}. Some of the gain may come from the extra thinking rather than the talk itself.`,
+    strategyKey(),
   ].filter(Boolean).map((x) => `<li>${x}</li>`).join("");
 })();
+
+function strategyKey() {
+  const bot = strat["strat-free-vs-maxpower"], talk = strat["strat-free-vs-notalk"], think = strat["strat-nothink-vs-low"];
+  if (!bot || !talk || !think) return "";
+  return `On strategy teams (mirror matches), free talk beat the max-power bot in <b>${pct(bot.sides[0].rate)}</b> of battles (random teams: ${pct(by["base-free"].rate)}) and beat no talk in <b>${pct(talk.sides[0].rate)}</b> (random teams: ${h2h[0] ? pct(h2h[0].sides[0].rate) : "–"}). ` +
+    `No thinking beat low thinking in <b>${pct(think.sides[0].rate)}</b>, generating ${kfmt(think.usage[0].output_tokens_per_battle)} output tokens per battle against ${kfmt(think.usage[1].output_tokens_per_battle)}.`;
+}
 
 winBars("f-bot", "Qwen team vs max-power bot", conds.map((c) => ({ ...c, name: c.label, color: COLOR[c.run] })));
 if (h2h.length) {
@@ -135,6 +158,43 @@ if (h2h.length) {
   winBars("f-h2h", `Qwen vs Qwen: ${m.labels[0]} vs ${m.labels[1]}`,
     m.sides.map((s, i) => ({ ...s, name: `${m.labels[i]} team`, color: i ? COLOR["base-notalk"] : COLOR["base-free"] })));
 }
+
+// Strategy teams: free talk's win rate on random vs strategy teams.
+(() => {
+  const rows = [
+    ["Free talk vs<br>max-power bot", by["base-free"], strat["strat-free-vs-maxpower"]?.sides[0]],
+    ["Free talk vs<br>no talk (Qwen)", h2h[0]?.sides[0], strat["strat-free-vs-notalk"]?.sides[0]],
+  ];
+  const bar = (name, i, color) => ({
+    type: "bar", name, x: rows.map((r) => r[0]), y: rows.map((r) => r[i]?.rate ?? null), marker: { color },
+    error_y: { type: "data", symmetric: false, array: rows.map((r) => r[i] ? r[i].ci[1] - r[i].rate : 0), arrayminus: rows.map((r) => r[i] ? r[i].rate - r[i].ci[0] : 0), color: "#1b1f24", thickness: 1.5, width: 6 },
+    text: rows.map((r) => r[i] ? pct(r[i].rate) : ""), textposition: "inside", insidetextanchor: "start", textfont: { color: "#fff", size: 13 },
+    customdata: rows.map((r) => r[i] ? [r[i].wins, r[i].battles] : [0, 0]),
+    hovertemplate: `${name}<br>won %{customdata[0]} of %{customdata[1]}<extra></extra>`,
+  });
+  Plotly.newPlot("f-compare", [bar("Random teams", 1, "#9ec5f4"), bar("Strategy teams", 2, "#1c5cab")], {
+    title: { text: "Free-talk team's win rate: random vs strategy teams", font: { size: 15 }, x: 0.02, xanchor: "left" }, font: FONT,
+    barmode: "group", bargap: 0.3, margin: { l: 60, r: 20, t: 50, b: 70 }, paper_bgcolor: "#fff", plot_bgcolor: "#fff",
+    yaxis: { title: "win rate", range: [0, 1], tickformat: ".0%", dtick: 0.25, gridcolor: "#eef1f4", zeroline: false },
+    legend: { orientation: "h", y: 1.0, x: 0.02 },
+    shapes: [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: 0.5, y1: 0.5, line: { dash: "dash", color: "#8c959f", width: 1 } }],
+  }, cfg);
+  const t = strat["strat-nothink-vs-low"];
+  if (t) winBars("f-think", "Qwen vs Qwen: no thinking vs low thinking",
+    t.sides.map((s, i) => ({ ...s, name: `${t.labels[i]} team`, color: i ? "#1c5cab" : "#9ec5f4" })));
+  const teams = ["Trick Room", "Tailwind", "Rain", "Sun"];
+  document.getElementById("strat-table").innerHTML =
+    `<tr><th>Run (first side vs second side)</th><th>Battles</th><th>First side won</th><th>95% CI</th>
+     ${teams.map((n) => `<th>${n}</th>`).join("")}<th>Messages per decision<br>(first / second)</th><th>Output tokens per battle<br>(first / second)</th></tr>` +
+    Object.values(strat).map((m) => {
+      const [a, b] = m.sides, [ua, ub] = m.usage;
+      const tok = (u) => u && u.output_tokens_per_battle ? kfmt(u.output_tokens_per_battle) : "–";
+      const msg = (u) => u && u.battles ? (u.messages_per_round || 0) : "–";
+      return `<tr><td>${esc(m.labels[0])} vs ${esc(m.labels[1])}</td><td>${a.battles}</td><td>${a.wins} (${pct(a.rate)})</td><td>${pct(a.ci[0])} to ${pct(a.ci[1])}</td>
+        ${teams.map((n) => { const c = m.by_team[n]; return `<td>${c ? `${c[0]}/${c[1]}` : "–"}</td>`; }).join("")}
+        <td>${msg(ua)} / ${msg(ub)}</td><td>${tok(ua)} / ${tok(ub)}</td></tr>`;
+    }).join("");
+})();
 
 // Table
 document.getElementById("table").innerHTML =
@@ -150,7 +210,8 @@ document.getElementById("table").innerHTML =
 
 // Battle reader
 const runSel = document.getElementById("run"), filterSel = document.getElementById("filter");
-runSel.innerHTML = [...conds.map((c) => [c.run, `${c.label} vs max-power bot`]), ...h2h.map((m) => [m.run, `${m.labels[0]} team (Blue) vs ${m.labels[1]} team (Red)`])]
+runSel.innerHTML = [...conds.map((c) => [c.run, `Random teams: ${c.label} vs max-power bot`]),
+  ...matches.map((m) => [m.run, `${m.teams === "random" ? "Random" : "Strategy"} teams: ${m.labels[0]} (Blue) vs ${m.labels[1]} (Red)`])]
   .map(([v, t]) => `<option value="${v}">${esc(t)}</option>`).join("");
 runSel.value = "base-free";
 const team = (seat) => seat === "p1" || seat === "p3" ? "blue" : "red";
@@ -158,7 +219,7 @@ function show(b) {
   const turns = new Map();
   for (const e of b.events) { if (!turns.has(e[0])) turns.set(e[0], []); turns.get(e[0]).push(e); }
   const blueWon = b.winner === "p1p3";
-  let out = `<div class="bhead"><b>${esc(b.key)}</b><b class="${blueWon ? "cb" : "cr"}">${blueWon ? "Blue" : "Red"} won</b><span>${b.turns} turns</span>
+  let out = `<div class="bhead"><b>${esc(b.key)}</b><b class="${blueWon ? "cb" : "cr"}">${blueWon ? "Blue" : "Red"} won</b><span>${b.turns} turns</span><span>${b.team === "random" ? "random teams" : esc(b.team) + " mirror"}</span>
     <span>${Object.values(b.players).map(esc).join(" · ")}</span></div>`;
   for (const [t, evs] of turns) {
     out += `<div class="turn"><div class="th">TURN ${t}</div>`;

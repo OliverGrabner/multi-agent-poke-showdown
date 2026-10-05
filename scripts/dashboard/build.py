@@ -24,8 +24,14 @@ RUNS = {
     "base-free": "Free talk",
     "base-solo": "One model controls both",
 }
-# Head-to-head runs: (label of side p1p3, label of side p2p4). Both sides are Qwen.
-HEAD_TO_HEAD = {"h2h-free-notalk": ("Free talk", "No talk")}
+# Two-team runs: (teams, label of side p1p3, label of side p2p4). Random teams, or strategy teams
+# (data/teams/strategy-v1.txt) played as mirror matches.
+MATCHES = {
+    "h2h-free-notalk": ("random", "Free talk", "No talk"),
+    "strat-free-vs-maxpower": ("strategy", "Free talk", "Max-power bot"),
+    "strat-free-vs-notalk": ("strategy", "Free talk", "No talk"),
+    "strat-nothink-vs-low": ("strategy", "No thinking", "Low thinking"),
+}
 
 
 def finished(records: list[dict]) -> list[dict]:
@@ -51,6 +57,16 @@ def paired_with(base: list[dict], other: list[dict]) -> dict:
     }
 
 
+def by_team(records: list[dict]) -> dict:
+    """Wins of side p1p3 per strategy team (both sides play the same team)."""
+    counts: dict[str, list[int]] = {}
+    for r in finished(records):
+        team = r["team_ids"]["p1"].split(" (")[0]
+        won, played = counts.get(team, [0, 0])
+        counts[team] = [won + (r["winning_side"] == "p1p3"), played + 1]
+    return counts
+
+
 def battle_rows(records: list[dict], run: str, sides: tuple[str, ...]) -> list[dict]:
     """One row per finished battle, with every message and choice of the model-backed sides."""
     return [
@@ -59,6 +75,7 @@ def battle_rows(records: list[dict], run: str, sides: tuple[str, ...]) -> list[d
             "key": r["battle_key"],
             "winner": r["winning_side"],
             "turns": r["turns"],
+            "team": r["team_ids"]["p1"].split(" (")[0] if "(" in r["team_ids"]["p1"] else "random",
             "players": r["players"],
             "events": [
                 [e["turn"], e["seat"], e["event"], e.get("text") or e["label"]]
@@ -77,7 +94,7 @@ def main(runs_dir: Path, out_path: Path) -> None:
 
     free_talk = load("base-free")
     built = datetime.now().strftime("%Y-%m-%d %H:%M")
-    data = {"built": built, "conditions": [], "head_to_head": [], "battles": []}
+    data = {"built": built, "conditions": [], "matches": [], "battles": []}
     for name, label in RUNS.items():
         records = load(name)
         data["conditions"].append(
@@ -91,14 +108,17 @@ def main(runs_dir: Path, out_path: Path) -> None:
             }
         )
         data["battles"] += battle_rows(records, name, ("p1p3",))
-    for name, labels in HEAD_TO_HEAD.items():
+    for name, (teams, *labels) in MATCHES.items():
         records = load(name)
-        data["head_to_head"].append(
+        data["matches"].append(
             {
                 "run": name,
+                "teams": teams,
                 "labels": labels,
                 "crashes": len(records) - len(finished(records)),
                 "sides": [wins(records, "p1p3"), wins(records, "p2p4")],
+                "usage": [side_report(records, "p1p3"), side_report(records, "p2p4")],
+                "by_team": by_team(records) if teams == "strategy" else None,
             }
         )
         data["battles"] += battle_rows(records, name, ("p1p3", "p2p4"))
