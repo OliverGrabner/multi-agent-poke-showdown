@@ -1,85 +1,73 @@
 #!/usr/bin/env bash
-# One run as one Slurm job: start the model server on this node, wait until it answers, check the
-# connection, play the battles, then stop the server.
+# One run as one Slurm job: start the model server(s), wait until they answer, check the
+# connections, play the battles, then stop the servers.
 # Submit with: scripts/hprc/submit.sh MODEL [pokerl llm arguments...]
 # Example:     scripts/hprc/submit.sh qwen3.8-27b --side-a qwen3.8-27b --side-b maxpower \
 #                  --mode-a free --label baseline-free --pairs 50 --workers 24
+# With SECOND_MODEL set (submit.sh then asks for two nodes), that model is served on the second
+# node, for battles between two different models.
 set -euo pipefail
 umask 077
 : "${SLURM_JOB_ID:?Submit this script through Slurm: scripts/hprc/submit.sh}"
 cd "${SLURM_SUBMIT_DIR:?}"
 source scripts/hprc/common.sh
+source configs/private/hprc.env
 printf '%s job started on %s\n' "$(date +%T)" "$(hostname)"
 model=${1:?Give the model to serve, e.g. qwen3.8-27b}
 shift
 
-case "$model" in
-  qwen3.8-27b)
-    repo=Qwen/Qwen3.8-27B
-    url_var=QWEN_BASE_URL
-    parsers=(--reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder)
-    ;;
-  gemma-4-31b)
-    repo=google/gemma-4-31B-it
-    url_var=GEMMA_BASE_URL
-    parsers=(--reasoning-parser gemma4 --enable-auto-tool-choice --tool-call-parser gemma4)
-    ;;
-  *)
-    printf 'Unknown model %s\n' "$model" >&2
-    exit 2
-    ;;
-esac
-
-# FlashInfer compiles kernels during warm-up and needs a CUDA toolchain (as in the pruning project).
-module load GCC/13.3.0 CUDA/13.0.0
-export CUDA_HOME="$(dirname "$(dirname "$(command -v nvcc)")")"
-export HF_HUB_OFFLINE=1  # weights were downloaded by setup.sh
-
-# Unpack the vLLM environment to local disk: importing it straight from scratch took ~30 minutes.
-local_env="${TMPDIR:-/tmp}/pokerl-vllm-${SLURM_JOB_ID}"
-mkdir -p "$local_env"
-tar -xf "$VLLM_ARCHIVE" -C "$local_env"
-vllm_python="$local_env/.venv-vllm/bin/python"
-export PATH="$local_env/.venv-vllm/bin:$PATH"
-printf '%s vLLM environment unpacked to %s\n' "$(date +%T)" "$local_env"
-
-# A private key for this job's server; it never leaves the node.
+# A private key for this job's servers; it never leaves the job's nodes.
 export VLLM_API_KEY="$(.venv/bin/python -c 'import secrets; print(secrets.token_urlsafe(32))')"
-port=8000
-gpus=$(nvidia-smi --list-gpus | wc -l)
 nvidia-smi > "runs/vllm-${SLURM_JOB_ID}-gpus.txt"
 
-"$vllm_python" -m vllm.entrypoints.openai.api_server \
-  --model "$repo" --served-model-name "$repo" \
-  --host 127.0.0.1 --port "$port" \
-  --dtype bfloat16 --tensor-parallel-size "$gpus" \
-  --max-model-len 262144 --max-num-seqs 64 --gpu-memory-utilization 0.95 \
-  --language-model-only --generation-config vllm "${parsers[@]}" \
-  > "runs/vllm-${SLURM_JOB_ID}.log" 2>&1 &
-server=$!
-trap 'kill "$server" 2>/dev/null || true; rm -rf "$local_env"' EXIT
+servers=()
+trap 'kill "${servers[@]}" 2>/dev/null || true' EXIT
+scripts/hprc/serve.sh "$model" 127.0.0.1 8000 &
+servers+=($!)
+model_info "$model"
+export "$url_var=http://127.0.0.1:8000/v1"
+urls=("http://127.0.0.1:8000/v1")
+checks=("$model")
 
-# Wait up to 90 minutes for the server (loading weights and compiling kernels takes a while).
-ready=false
-for _ in $(seq 540); do
-  if curl -fs -o /dev/null -H "Authorization: Bearer $VLLM_API_KEY" "http://127.0.0.1:$port/v1/models"; then
-    ready=true
-    break
-  fi
-  if ! kill -0 "$server" 2>/dev/null; then
-    printf 'The model server stopped; see runs/vllm-%s.log\n' "$SLURM_JOB_ID" >&2
+if [[ -n ${SECOND_MODEL:-} ]]; then
+  second_node=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | sed -n 2p)
+  : "${second_node:?SECOND_MODEL needs a two-node job: submit through scripts/hprc/submit.sh}"
+  srun --nodes=1 --ntasks=1 --relative=1 --gres="$HPRC_GPU_GRES" --cpus-per-task=8 --mem=0 \
+    scripts/hprc/serve.sh "$SECOND_MODEL" 0.0.0.0 8001 &
+  servers+=($!)
+  model_info "$SECOND_MODEL"
+  export "$url_var=http://$second_node:8001/v1"
+  export NO_PROXY="$NO_PROXY,$second_node" no_proxy="$NO_PROXY,$second_node"
+  urls+=("http://$second_node:8001/v1")
+  checks+=("$SECOND_MODEL")
+fi
+
+# Wait up to 90 minutes for every server (loading weights and compiling kernels takes a while).
+for url in "${urls[@]}"; do
+  ready=false
+  for _ in $(seq 540); do
+    if curl -fs -o /dev/null -H "Authorization: Bearer $VLLM_API_KEY" "$url/models"; then
+      ready=true
+      break
+    fi
+    for server in "${servers[@]}"; do
+      if ! kill -0 "$server" 2>/dev/null; then
+        printf 'A model server stopped; see runs/vllm-%s-*.log\n' "$SLURM_JOB_ID" >&2
+        exit 1
+      fi
+    done
+    sleep 10
+  done
+  if [[ $ready != true ]]; then
+    printf 'No model server at %s after 90 minutes; see runs/vllm-%s-*.log\n' "$url" "$SLURM_JOB_ID" >&2
     exit 1
   fi
-  sleep 10
+  printf '%s model server ready at %s\n' "$(date +%T)" "$url"
 done
-if [[ $ready != true ]]; then
-  printf 'The model server was not ready after 90 minutes; see runs/vllm-%s.log\n' "$SLURM_JOB_ID" >&2
-  exit 1
-fi
-printf '%s model server ready\n' "$(date +%T)"
-export "$url_var=http://127.0.0.1:$port/v1"
 
-.venv/bin/pokerl model-check --model "$model"
+for check in "${checks[@]}"; do
+  .venv/bin/pokerl model-check --model "$check"
+done
 if [[ $# -gt 0 ]]; then
   .venv/bin/pokerl llm "$@"
 fi

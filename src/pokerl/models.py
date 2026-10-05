@@ -93,6 +93,22 @@ MODELS = {
             "chat_template_kwargs": {"enable_thinking": True, "reasoning_effort": "medium"},
         },
     ),
+    # A small model of the same family for big-vs-small battles, served on its own node.
+    # Sampling: model card, non-thinking text mode, which is its default (checked 2026-10-05).
+    "qwen3.5-2b": ModelConfig(
+        model="Qwen/Qwen3.5-2B",
+        base_url="$QWEN_SMALL_BASE_URL",
+        key_env="VLLM_API_KEY",
+        params={
+            "temperature": 1.0,
+            "top_p": 1.0,
+            "top_k": 20,
+            "min_p": 0.0,
+            "presence_penalty": 2.0,
+            "repetition_penalty": 1.0,
+            "chat_template_kwargs": {"enable_thinking": False},
+        },
+    ),
     # The same Qwen server with less thinking: "low" effort (official setting), and none at all.
     "qwen3.8-27b-low": ModelConfig(
         model="Qwen/Qwen3.8-27B",

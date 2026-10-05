@@ -21,3 +21,22 @@ export VLLM_ARCHIVE="$PWD/cache/venv-vllm.tar"
 export NO_PROXY="127.0.0.1,localhost${NO_PROXY:+,$NO_PROXY}"
 export no_proxy="$NO_PROXY"
 mkdir -p runs
+
+# The Hugging Face repo, the URL variable the battle code reads, the GPUs to use and the vLLM
+# parsers for each model this project serves (sets repo, url_var, gpus and parsers).
+model_info() {
+  case "$1" in
+    qwen3.8-27b)
+      repo=Qwen/Qwen3.8-27B url_var=QWEN_BASE_URL gpus=2
+      parsers=(--reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder) ;;
+    qwen3.5-2b)
+      repo=Qwen/Qwen3.5-2B url_var=QWEN_SMALL_BASE_URL gpus=1
+      parsers=(--reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder) ;;
+    gemma-4-31b)
+      repo=google/gemma-4-31B-it url_var=GEMMA_BASE_URL gpus=2
+      parsers=(--reasoning-parser gemma4 --enable-auto-tool-choice --tool-call-parser gemma4) ;;
+    *)
+      printf 'Unknown model %s\n' "$1" >&2
+      return 2 ;;
+  esac
+}
