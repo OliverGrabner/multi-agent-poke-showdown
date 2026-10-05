@@ -9,7 +9,7 @@ set -euo pipefail
 source configs/private/hprc.env
 HPRC_TIME=${TIME:-$HPRC_TIME}
 mkdir -p runs
-common=(--account="$HPRC_ACCOUNT" --ntasks=1 --output=runs/slurm-%j.out)
+common=(--account="$HPRC_ACCOUNT" --ntasks-per-node=1 --output=runs/slurm-%j.out)
 if [[ -n ${AFTER:-} ]]; then
   common+=(--dependency="afterok:$AFTER" --kill-on-invalid-dep=yes)
 fi
