@@ -32,6 +32,9 @@ model_info() {
     qwen3.5-2b)
       repo=Qwen/Qwen3.5-2B url_var=QWEN_SMALL_BASE_URL gpus=1
       parsers=(--reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder) ;;
+    qwen3.5-9b)
+      repo=Qwen/Qwen3.5-9B url_var=QWEN_SMALL_BASE_URL gpus=1
+      parsers=(--reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder) ;;
     gemma-4-31b)
       repo=google/gemma-4-31B-it url_var=GEMMA_BASE_URL gpus=2
       parsers=(--reasoning-parser gemma4 --enable-auto-tool-choice --tool-call-parser gemma4) ;;

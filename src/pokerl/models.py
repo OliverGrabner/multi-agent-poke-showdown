@@ -109,6 +109,22 @@ MODELS = {
             "chat_template_kwargs": {"enable_thinking": False},
         },
     ),
+    # A mid-size model of the same family, also on its own node. Thinking is its default.
+    # Sampling: model card, thinking mode for general tasks (checked 2026-10-06).
+    "qwen3.5-9b": ModelConfig(
+        model="Qwen/Qwen3.5-9B",
+        base_url="$QWEN_SMALL_BASE_URL",
+        key_env="VLLM_API_KEY",
+        params={
+            "temperature": 1.0,
+            "top_p": 0.95,
+            "top_k": 20,
+            "min_p": 0.0,
+            "presence_penalty": 1.5,
+            "repetition_penalty": 1.0,
+            "chat_template_kwargs": {"enable_thinking": True},
+        },
+    ),
     # The same Qwen server with less thinking: "low" effort (official setting), and none at all.
     "qwen3.8-27b-low": ModelConfig(
         model="Qwen/Qwen3.8-27B",

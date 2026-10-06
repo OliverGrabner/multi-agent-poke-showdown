@@ -42,6 +42,7 @@ download() {
 }
 download Qwen/Qwen3.8-27B
 download Qwen/Qwen3.5-2B
+download Qwen/Qwen3.5-9B
 # The second family is optional; its weights may need a license accepted on Hugging Face first.
 download google/gemma-4-31B-it || printf 'Warning: could not download google/gemma-4-31B-it\n' >&2
 
