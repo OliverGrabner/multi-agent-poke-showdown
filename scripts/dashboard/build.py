@@ -31,6 +31,7 @@ MATCHES = {
     "strat-free-vs-maxpower": ("strategy", "Free talk", "Max-power bot"),
     "strat-free-vs-notalk": ("strategy", "Free talk", "No talk"),
     "strat-nothink-vs-low": ("strategy", "No thinking", "Low thinking"),
+    "big-vs-small": ("random", "Qwen3.8-27B", "Qwen3.5-2B"),
 }
 
 
@@ -54,6 +55,20 @@ def paired_with(base: list[dict], other: list[dict]) -> dict:
         "shared": len(keys),
         "only_base": sum(won[k] and not won_other[k] for k in keys),
         "only_other": sum(won_other[k] and not won[k] for k in keys),
+    }
+
+
+def draw_pairs(records: list[dict]) -> dict:
+    """Team draws whose two battles (sides swapped) both finished: did side p1p3 win both, one or none?"""
+    by_seed: dict[str, list[bool]] = {}
+    for r in finished(records):
+        by_seed.setdefault(r["battle_key"].rstrip("m"), []).append(r["winning_side"] == "p1p3")
+    complete = [won for won in by_seed.values() if len(won) == 2]
+    return {
+        "complete": len(complete),
+        "a_both": sum(all(won) for won in complete),
+        "split": sum(sum(won) == 1 for won in complete),
+        "b_both": sum(not any(won) for won in complete),
     }
 
 
@@ -119,6 +134,7 @@ def main(runs_dir: Path, out_path: Path) -> None:
                 "sides": [wins(records, "p1p3"), wins(records, "p2p4")],
                 "usage": [side_report(records, "p1p3"), side_report(records, "p2p4")],
                 "by_team": by_team(records) if teams == "strategy" else None,
+                "pairs": draw_pairs(records) if teams == "random" else None,
             }
         )
         data["battles"] += battle_rows(records, name, ("p1p3", "p2p4"))
