@@ -32,6 +32,7 @@ MATCHES = {
     "strat-free-vs-notalk": ("strategy", "Free talk", "No talk"),
     "strat-nothink-vs-low": ("strategy", "No thinking", "Low thinking"),
     "big-vs-small": ("random", "Qwen3.8-27B", "Qwen3.5-2B"),
+    "big-vs-9b": ("random", "Qwen3.8-27B", "Qwen3.5-9B"),
 }
 
 

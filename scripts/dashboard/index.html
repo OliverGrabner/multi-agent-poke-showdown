@@ -64,14 +64,10 @@ Every condition plays the same 25 team draws twice with the sides swapped, so th
     <figcaption>Both teams are Qwen, playing each other: a free-talk team against a no-talk team. The two bars add up to 100%.</figcaption></figure>
 </div>
 
-<h2>Big model vs small model (random teams)</h2>
-<p class="lead">Qwen3.8-27B (medium reasoning) against Qwen3.5-2B (about 12 times smaller, no thinking: its default), both teams with free talk.
-Same 25 team draws as above, each played twice with the sides swapped.</p>
-<div class="figs">
-  <figure><div class="plot" id="f-bigsmall"></div>
-    <figcaption>The two bars add up to 100%. Whiskers: 95% confidence interval.</figcaption></figure>
-  <figure><div id="bigsmall-notes" style="font-size:14px"></div></figure>
-</div>
+<h2>Big model vs smaller models (random teams)</h2>
+<p class="lead">Qwen3.8-27B (medium reasoning) against smaller Qwen3.5 models, both teams with free talk. The 2B model is about 12 times smaller and does not think (its default); the 9B model is about 3 times smaller and thinks.
+Same team draws for every run, each played twice with the sides swapped.</p>
+<div id="bigsmall"></div>
 
 <h2>Random teams: numbers per condition (against the max-power bot)</h2>
 <div class="tablewrap"><table id="table"></table></div>
@@ -105,7 +101,7 @@ one player has the setter, the other has the Pokémon that need it. Both sides g
 const DATA = __DATA__;
 const conds = DATA.conditions, matches = DATA.matches;
 const h2h = matches.filter((m) => m.run === "h2h-free-notalk");
-const bigSmall = matches.find((m) => m.run === "big-vs-small");
+const smalls = ["big-vs-small", "big-vs-9b"].map((r) => matches.find((m) => m.run === r)).filter(Boolean);
 const strat = Object.fromEntries(matches.filter((m) => m.teams === "strategy").map((m) => [m.run, m]));
 const by = Object.fromEntries(conds.map((c) => [c.run, c]));
 const pct = (x, d = 0) => (x * 100).toFixed(d) + "%";
@@ -151,7 +147,7 @@ function winBars(id, title, bars) {
     `On the same battles, free talk won ${p.only_base} that no talk lost, and no talk won ${p.only_other} that free talk lost (p = ${mcnemar(p.only_base, p.only_other).toFixed(3)}).`,
     m ? `Playing each other, the free-talk team beat the no-talk team in <b>${pct(m.sides[0].rate)}</b> of ${m.sides[0].battles} battles.` : "",
     `Talking costs compute: free talk generates ${kfmt(C.usage.output_tokens_per_battle)} output tokens per battle, no talk ${kfmt(A.usage.output_tokens_per_battle)}. Some of the gain may come from the extra thinking rather than the talk itself.`,
-    bigSmall ? `A 12 times smaller model barely competes: Qwen3.8-27B beat Qwen3.5-2B in <b>${pct(bigSmall.sides[0].rate)}</b> of ${bigSmall.sides[0].battles} battles; the 2B model's replies were valid only ${pct(bigSmall.usage[1].valid_reply_rate)} of the time.` : "",
+    ...smalls.map((m) => `Qwen3.8-27B beat ${m.labels[1]} in <b>${pct(m.sides[0].rate)}</b> of ${m.sides[0].battles} battles; that model's replies were valid ${pct(m.usage[1].valid_reply_rate)} of the time.`),
     strategyKey(),
   ].filter(Boolean).map((x) => `<li>${x}</li>`).join("");
 })();
@@ -207,21 +203,26 @@ if (h2h.length) {
     }).join("");
 })();
 
-// Big vs small model
-if (bigSmall) {
-  winBars("f-bigsmall", "Qwen3.8-27B vs Qwen3.5-2B", bigSmall.sides.map((s, i) => ({ ...s, name: `${bigSmall.labels[i]} team`, color: i ? "#a3aab6" : "#1c5cab" })));
-  const [ub, us] = bigSmall.usage, p = bigSmall.pairs;
+// Big vs smaller models
+smalls.forEach((m, k) => {
+  const small = m.labels[1], size = small.split("-")[0].replace("Qwen3.5-", "");
+  document.getElementById("bigsmall").insertAdjacentHTML("beforeend",
+    `<div class="figs"><figure><div class="plot" id="f-small${k}"></div>
+     <figcaption>Qwen3.8-27B vs ${small}. The two bars add up to 100%. Whiskers: 95% confidence interval.</figcaption></figure>
+     <figure><div id="small-notes${k}" style="font-size:14px"></div></figure></div>`);
+  winBars(`f-small${k}`, `Qwen3.8-27B vs ${small}`, m.sides.map((s, i) => ({ ...s, name: `${m.labels[i]} team`, color: i ? "#a3aab6" : "#1c5cab" })));
+  const [ub, us] = m.usage, p = m.pairs;
   const row = (label, b, s2) => `<tr><td>${label}</td><td>${b}</td><td>${s2}</td></tr>`;
-  document.getElementById("bigsmall-notes").innerHTML = `<table>
-    <tr><th></th><th>27B team</th><th>2B team</th></tr>
-    ${row("Battles won", `${bigSmall.sides[0].wins} of ${bigSmall.sides[0].battles}`, `${bigSmall.sides[1].wins}`)}
+  document.getElementById(`small-notes${k}`).innerHTML = `<table>
+    <tr><th></th><th>27B team</th><th>${size} team</th></tr>
+    ${row("Battles won", `${m.sides[0].wins} of ${m.sides[0].battles}`, `${m.sides[1].wins}`)}
     ${p ? row("Team draws won both times", p.a_both, p.b_both) + row("Draws split one each", p.split, p.split) : ""}
     ${row("Valid replies", pct(ub.valid_reply_rate, 1), pct(us.valid_reply_rate, 1))}
     ${row("Random fallback moves", ub.fallback_choices, us.fallback_choices)}
     ${row("Messages per decision", ub.messages_per_round, us.messages_per_round)}
     ${row("Output tokens per battle", kfmt(ub.output_tokens_per_battle), kfmt(us.output_tokens_per_battle))}
-  </table><p class="note">A fallback is a random legal move, played after three invalid replies in a row. ${bigSmall.crashes} battles crashed (server timeouts) and are left out.</p>`;
-}
+  </table><p class="note">A fallback is a random legal move, played after three invalid replies in a row. ${m.crashes} battles crashed (server timeouts) and are left out.</p>`;
+});
 
 // Table
 document.getElementById("table").innerHTML =
